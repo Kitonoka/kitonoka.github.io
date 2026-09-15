@@ -4,6 +4,8 @@ Personal developer website built with **Astro**, **TypeScript**, and **Tailwind 
 
 The site contains personal information, social links, and dynamically fetched GitHub projects.
 
+The site also contains useful utilities. Refer to the [Projects](#projects) section below.
+
 ## Stack
 
 * Astro
@@ -29,6 +31,12 @@ Static SVG generator for creating project-based SVG content directly from Astro.
 Visual CSS gradient generator with support for linear, radial, and conic gradients, including color stops, positioning, and live CSS output.
 
 [View project →](https://kitonoka.github.io/projects/css-gradient/)
+
+### JWT Decoder
+
+Local JSON Web Token decoder for inspecting JWT headers, payloads, signatures, and common claims without verifying the signature.
+
+[View project →](https://kitonoka.github.io/projects/jwt/)
 
 ## GitHub Projects
 
