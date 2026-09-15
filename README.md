@@ -38,6 +38,12 @@ Local JSON Web Token decoder for inspecting JWT headers, payloads, signatures, a
 
 [View project →](https://kitonoka.github.io/projects/jwt/)
 
+### Regex Lab
+
+Client-side regular expression testing and debugging tool with match highlighting, capture groups, replacements, flags, and common regex presets.
+
+[View project →](https://kitonoka.github.io/projects/regex/)
+
 ## GitHub Projects
 
 Public repositories are fetched from the GitHub API during the Astro build.
