@@ -1,0 +1,147 @@
+---
+
+const projectPages = import.meta.glob(
+"../pages/projects/*.astro",
+{
+eager: true,
+}
+);
+
+const projects = Object.keys(projectPages)
+.map((file) => {
+const slug = file
+.split("/")
+.pop()
+?.replace(".astro", "");
+
+    if (!slug || slug === "index") {
+        return null;
+    }
+
+    return {
+        slug,
+        url: `/projects/${slug}`,
+    };
+})
+.filter(
+    (
+        project
+    ): project is {
+        slug: string;
+        url: string;
+    } => project !== null
+);
+
+---
+
+<section class="projects">
+    <div class="section-heading">
+        <p class="eyebrow">Projects</p>
+
+    <h2>Things I've built.</h2>
+
+    <p>
+        Tools, experiments, and other projects.
+    </p>
+</div>
+
+<div class="project-list">
+    {
+        projects.map((project) => (
+            <a
+                class="project"
+                href={project.url}
+            >
+                <div>
+                    <h3>
+                        {project.slug
+                            .replace(/-/g, " ")
+                            .replace(/\b\w/g, (char) =>
+                                char.toUpperCase()
+                            )}
+                    </h3>
+
+                    <p>
+                        View project →
+                    </p>
+                </div>
+
+                <span aria-hidden="true">↗</span>
+            </a>
+        ))
+    }
+</div>
+
+</section>
+
+<style>
+    .projects {
+        padding: 4rem 0;
+        border-top: 1px solid var(--border);
+    }
+
+    .section-heading {
+        margin-bottom: 1.5rem;
+    }
+
+    .eyebrow {
+        margin: 0 0 0.6rem;
+        color: var(--accent);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: clamp(1.8rem, 4vw, 2.5rem);
+        letter-spacing: -0.04em;
+    }
+
+    .section-heading > p:last-child {
+        margin: 0.75rem 0 0;
+        color: var(--foreground-muted);
+    }
+
+    .project-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .project {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.25rem;
+        border: 1px solid var(--border);
+        border-radius: 0.7rem;
+        background: var(--background-secondary);
+        transition:
+            border-color 160ms ease,
+            transform 160ms ease;
+    }
+
+    .project:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+    }
+
+    h3 {
+        margin: 0;
+        font-size: 1rem;
+        text-transform: capitalize;
+    }
+
+    .project p {
+        margin: 0.35rem 0 0;
+        color: var(--foreground-muted);
+        font-size: 0.85rem;
+    }
+
+    .project > span {
+        color: var(--foreground-muted);
+        font-size: 1.1rem;
+    }
+</style>
