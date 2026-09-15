@@ -1,0 +1,1215 @@
+---
+const defaultStops = [
+    { color: "#8B5CF6", position: 0 },
+    { color: "#EC4899", position: 50 },
+    { color: "#F59E0B", position: 100 },
+];
+---
+
+<main class="css-gradient">
+    <header class="header">
+        <div class="heading">
+            <a class="back" href="/">← Kitonoka</a>
+
+            <p class="eyebrow">Project</p>
+
+            <h1>CSS Gradient</h1>
+
+            <p class="description">
+                Create CSS gradients visually and copy the result instantly.
+            </p>
+        </div>
+    </header>
+
+    <section
+        class="workspace"
+        aria-label="CSS gradient generator"
+    >
+        <div class="panel preview-panel">
+            <div class="panel-header">
+                <span>Preview</span>
+
+                <span class="dimensions">
+                    CSS Gradient
+                </span>
+            </div>
+
+            <div class="preview">
+                <div
+                    class="gradient-preview"
+                    data-gradient-preview
+                    aria-label="Gradient preview"
+                ></div>
+            </div>
+        </div>
+
+        <div class="panel controls-panel">
+            <section class="section">
+                <div class="section-header">
+                    <h2>Gradient</h2>
+                </div>
+
+                <div class="row">
+                    <label for="gradient-type">
+                        Type
+                    </label>
+
+                    <select
+                        id="gradient-type"
+                        data-gradient-type
+                    >
+                        <option value="linear">Linear</option>
+                        <option value="radial">Radial</option>
+                        <option value="conic">Conic</option>
+                    </select>
+                </div>
+
+                <div
+                    class="row"
+                    data-angle-row
+                >
+                    <label for="gradient-angle">
+                        Angle
+
+                        <span data-angle-value>
+                            135°
+                        </span>
+                    </label>
+
+                    <input
+                        id="gradient-angle"
+                        type="range"
+                        min="0"
+                        max="360"
+                        value="135"
+                        data-gradient-angle
+                    />
+                </div>
+
+                <div class="position-editor">
+                    <div class="position-heading">
+                        <span>Position</span>
+                        <span data-position-value>
+                            50% 50%
+                        </span>
+                    </div>
+
+                    <div class="position-row">
+                        <label for="gradient-position-x">X</label>
+                        <input
+                            id="gradient-position-x"
+                            type="range"
+                            min="0"
+                            max="100"
+                            value="50"
+                            data-gradient-position-x
+                        />
+                        <output data-position-x-value>50%</output>
+                    </div>
+
+                    <div class="position-row">
+                        <label for="gradient-position-y">Y</label>
+                        <input
+                            id="gradient-position-y"
+                            type="range"
+                            min="0"
+                            max="100"
+                            value="50"
+                            data-gradient-position-y
+                        />
+                        <output data-position-y-value>50%</output>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section">
+                <div class="section-header">
+                    <h2>Stops</h2>
+
+                    <button
+                        type="button"
+                        data-add-stop
+                    >
+                        Add stop
+                    </button>
+                </div>
+
+                <div
+                    class="gradient-stop-editor"
+                    data-gradient-stops
+                >
+                    {
+                        defaultStops.map((stop, index) => (
+                            <div
+                                class="gradient-stop"
+                                data-gradient-stop
+                                data-index={index}
+                            >
+                                <input
+                                    type="color"
+                                    value={stop.color}
+                                    data-stop-color
+                                    aria-label={`Stop ${index + 1} color`}
+                                />
+
+                                <input
+                                    type="text"
+                                    value={stop.color}
+                                    data-stop-hex
+                                    maxlength="7"
+                                    spellcheck="false"
+                                    aria-label={`Stop ${index + 1} hex color`}
+                                />
+
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={stop.position}
+                                    data-stop-position
+                                    aria-label={`Stop ${index + 1} position`}
+                                />
+
+                                <output data-stop-position-value>
+                                    {stop.position}%
+                                </output>
+
+                                <button
+                                    type="button"
+                                    data-remove-stop
+                                    aria-label={`Remove stop ${index + 1}`}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))
+                    }
+                </div>
+            </section>
+
+            <section class="section">
+                <div class="section-header">
+                    <h2>CSS</h2>
+
+                    <button
+                        type="button"
+                        data-copy-css
+                    >
+                        Copy
+                    </button>
+                </div>
+
+                <pre class="gradient-code"><code data-css-output></code></pre>
+            </section>
+        </div>
+    </section>
+</main>
+
+<script>
+    const root = document.querySelector(
+        "[data-gradient-preview]",
+    )?.closest(".css-gradient");
+
+    if (!(root instanceof HTMLElement)) {
+        throw new Error(
+            "CSS Gradient failed to initialize.",
+        );
+    }
+
+    const preview =
+        root.querySelector("[data-gradient-preview]");
+
+    const typeInput =
+        root.querySelector("[data-gradient-type]");
+
+    const angleInput =
+        root.querySelector("[data-gradient-angle]");
+
+    const angleValue =
+        root.querySelector("[data-angle-value]");
+
+    const angleRow =
+        root.querySelector("[data-angle-row]");
+
+    const positionXInput =
+        root.querySelector("[data-gradient-position-x]");
+
+    const positionYInput =
+        root.querySelector("[data-gradient-position-y]");
+
+    const positionValue =
+        root.querySelector("[data-position-value]");
+
+    const positionXValue =
+        root.querySelector("[data-position-x-value]");
+
+    const positionYValue =
+        root.querySelector("[data-position-y-value]");
+
+    const stopsContainer =
+        root.querySelector("[data-gradient-stops]");
+
+    const addStopButton =
+        root.querySelector("[data-add-stop]");
+
+    const copyButton =
+        root.querySelector("[data-copy-css]");
+
+    const cssOutput =
+        root.querySelector("[data-css-output]");
+
+    if (
+        !(preview instanceof HTMLElement) ||
+        !(typeInput instanceof HTMLSelectElement) ||
+        !(angleInput instanceof HTMLInputElement) ||
+        !(angleValue instanceof HTMLElement) ||
+        !(angleRow instanceof HTMLElement) ||
+        !(positionXInput instanceof HTMLInputElement) ||
+        !(positionYInput instanceof HTMLInputElement) ||
+        !(positionValue instanceof HTMLElement) ||
+        !(positionXValue instanceof HTMLOutputElement) ||
+        !(positionYValue instanceof HTMLOutputElement) ||
+        !(stopsContainer instanceof HTMLElement) ||
+        !(addStopButton instanceof HTMLButtonElement) ||
+        !(copyButton instanceof HTMLButtonElement) ||
+        !(cssOutput instanceof HTMLElement)
+    ) {
+        throw new Error(
+            "CSS Gradient failed to initialize.",
+        );
+    }
+
+    const getStops = () =>
+        Array.from(
+            stopsContainer.querySelectorAll(
+                "[data-gradient-stop]",
+            ),
+        )
+            .map((element) => {
+                const colorInput =
+                    element.querySelector(
+                        "[data-stop-color]",
+                    );
+
+                const hexInput =
+                    element.querySelector(
+                        "[data-stop-hex]",
+                    );
+
+                const positionInput =
+                    element.querySelector(
+                        "[data-stop-position]",
+                    );
+
+                if (
+                    !(colorInput instanceof HTMLInputElement) ||
+                    !(hexInput instanceof HTMLInputElement) ||
+                    !(positionInput instanceof HTMLInputElement)
+                ) {
+                    return null;
+                }
+
+                return {
+                    element,
+                    colorInput,
+                    hexInput,
+                    positionInput,
+                    color: colorInput.value,
+                    position: Number(
+                        positionInput.value,
+                    ),
+                };
+            })
+            .filter(
+                (
+                    stop,
+                ): stop is {
+                    element: Element;
+                    colorInput: HTMLInputElement;
+                    hexInput: HTMLInputElement;
+                    positionInput: HTMLInputElement;
+                    color: string;
+                    position: number;
+                } => stop !== null,
+            )
+            .sort(
+                (a, b) =>
+                    a.position - b.position,
+            );
+
+    const getGradient = () => {
+        const stops = getStops();
+
+        const stopString = stops
+            .map(
+                (stop) =>
+                    `${stop.color} ${stop.position}%`,
+            )
+            .join(", ");
+
+        const x = `${positionXInput.value}%`;
+        const y = `${positionYInput.value}%`;
+
+        switch (typeInput.value) {
+            case "radial":
+                return `radial-gradient(circle at ${x} ${y}, ${stopString})`;
+
+            case "conic":
+                return `conic-gradient(from ${angleInput.value}deg at ${x} ${y}, ${stopString})`;
+
+            default:
+                return `linear-gradient(${angleInput.value}deg, ${stopString})`;
+        }
+    };
+
+    const getBackgroundCSS = () => {
+        const gradient = getGradient();
+        const position =
+            `${positionXInput.value}% ${positionYInput.value}%`;
+
+        if (typeInput.value === "linear") {
+            return [
+                `background: ${gradient};`,
+                `background-size: 200% 200%;`,
+                `background-position: ${position};`,
+            ].join("\n");
+        }
+
+        return `background: ${gradient};`;
+    };
+
+    const update = () => {
+        const gradient = getGradient();
+
+        preview.style.background = gradient;
+
+        if (typeInput.value === "linear") {
+            preview.style.backgroundSize = "200% 200%";
+            preview.style.backgroundPosition =
+                `${positionXInput.value}% ${positionYInput.value}%`;
+        } else {
+            preview.style.backgroundSize = "";
+            preview.style.backgroundPosition = "";
+        }
+
+        cssOutput.textContent =
+            getBackgroundCSS();
+
+        angleValue.textContent =
+            `${angleInput.value}°`;
+
+        positionXValue.value =
+            `${positionXInput.value}%`;
+        positionXValue.textContent =
+            `${positionXInput.value}%`;
+
+        positionYValue.value =
+            `${positionYInput.value}%`;
+        positionYValue.textContent =
+            `${positionYInput.value}%`;
+
+        positionValue.textContent =
+            `${positionXInput.value}% ${positionYInput.value}%`;
+
+        angleRow.hidden =
+            typeInput.value === "radial";
+
+        stopsContainer
+            .querySelectorAll(
+                "[data-gradient-stop]",
+            )
+            .forEach((element) => {
+                const positionInput =
+                    element.querySelector(
+                        "[data-stop-position]",
+                    );
+
+                const positionValue =
+                    element.querySelector(
+                        "[data-stop-position-value]",
+                    );
+
+                if (
+                    positionInput instanceof HTMLInputElement &&
+                    positionValue instanceof HTMLOutputElement
+                ) {
+                    positionValue.value =
+                        `${positionInput.value}%`;
+
+                    positionValue.textContent =
+                        `${positionInput.value}%`;
+                }
+            });
+    };
+
+    const createStop = (
+        color = "#8B5CF6",
+        position = 50,
+    ) => {
+        const template =
+            stopsContainer.querySelector(
+                "[data-gradient-stop]",
+            );
+
+        if (!(template instanceof HTMLElement)) {
+            return;
+        }
+
+        /*
+         * Clone an existing stop instead of constructing one
+         * from scratch. Astro scopes component styles by adding
+         * attributes to server-rendered elements; cloning keeps
+         * those attributes, so dynamically added stops receive
+         * exactly the same styling as the initial stops.
+         */
+        const stop = template.cloneNode(true);
+
+        if (!(stop instanceof HTMLElement)) {
+            return;
+        }
+
+        const colorInput =
+            stop.querySelector("[data-stop-color]");
+
+        const hexInput =
+            stop.querySelector("[data-stop-hex]");
+
+        const positionInput =
+            stop.querySelector("[data-stop-position]");
+
+        const positionValue =
+            stop.querySelector(
+                "[data-stop-position-value]",
+            );
+
+        if (
+            !(colorInput instanceof HTMLInputElement) ||
+            !(hexInput instanceof HTMLInputElement) ||
+            !(positionInput instanceof HTMLInputElement)
+        ) {
+            return;
+        }
+
+        colorInput.value = color.toUpperCase();
+        hexInput.value = color.toUpperCase();
+        positionInput.value = String(position);
+
+        if (positionValue instanceof HTMLOutputElement) {
+            positionValue.value = `${position}%`;
+            positionValue.textContent = `${position}%`;
+        }
+
+        stop.removeAttribute("data-index");
+
+        const index =
+            stopsContainer.querySelectorAll(
+                "[data-gradient-stop]",
+            ).length;
+
+        colorInput.setAttribute(
+            "aria-label",
+            `Stop ${index + 1} color`,
+        );
+
+        hexInput.setAttribute(
+            "aria-label",
+            `Stop ${index + 1} hex color`,
+        );
+
+        positionInput.setAttribute(
+            "aria-label",
+            `Stop ${index + 1} position`,
+        );
+
+        const removeButton =
+            stop.querySelector("[data-remove-stop]");
+
+        if (removeButton instanceof HTMLButtonElement) {
+            removeButton.setAttribute(
+                "aria-label",
+                `Remove stop ${index + 1}`,
+            );
+        }
+
+        stopsContainer.appendChild(stop);
+
+        update();
+    };
+
+    root.addEventListener(
+        "input",
+        (event) => {
+            const target = event.target;
+
+            if (
+                !(target instanceof HTMLInputElement)
+            ) {
+                return;
+            }
+
+            const stop =
+                target.closest(
+                    "[data-gradient-stop]",
+                );
+
+            if (!stop) {
+                update();
+                return;
+            }
+
+            const colorInput =
+                stop.querySelector(
+                    "[data-stop-color]",
+                );
+
+            const hexInput =
+                stop.querySelector(
+                    "[data-stop-hex]",
+                );
+
+            if (
+                target.matches(
+                    "[data-stop-color]",
+                ) &&
+                colorInput instanceof HTMLInputElement &&
+                hexInput instanceof HTMLInputElement
+            ) {
+                hexInput.value =
+                    colorInput.value.toUpperCase();
+            }
+
+            if (
+                target.matches(
+                    "[data-stop-hex]",
+                ) &&
+                colorInput instanceof HTMLInputElement &&
+                hexInput instanceof HTMLInputElement
+            ) {
+                const value =
+                    hexInput.value.trim();
+
+                if (
+                    /^#[0-9A-Fa-f]{6}$/.test(
+                        value,
+                    )
+                ) {
+                    colorInput.value =
+                        value;
+                }
+            }
+
+            update();
+        },
+    );
+
+    root.addEventListener(
+        "change",
+        (event) => {
+            const target = event.target;
+
+            if (
+                !(target instanceof HTMLInputElement)
+            ) {
+                return;
+            }
+
+            if (
+                target.matches(
+                    "[data-stop-hex]",
+                )
+            ) {
+                const value =
+                    target.value.trim();
+
+                if (
+                    !/^#[0-9A-Fa-f]{6}$/.test(
+                        value,
+                    )
+                ) {
+                    const stop =
+                        target.closest(
+                            "[data-gradient-stop]",
+                        );
+
+                    const colorInput =
+                        stop?.querySelector(
+                            "[data-stop-color]",
+                        );
+
+                    if (
+                        colorInput instanceof HTMLInputElement
+                    ) {
+                        target.value =
+                            colorInput.value.toUpperCase();
+                    }
+                }
+            }
+
+            update();
+        },
+    );
+
+    root.addEventListener(
+        "click",
+        (event) => {
+            const target = event.target;
+
+            if (
+                !(target instanceof HTMLElement)
+            ) {
+                return;
+            }
+
+            const removeButton =
+                target.closest(
+                    "[data-remove-stop]",
+                );
+
+            if (!removeButton) {
+                return;
+            }
+
+            const stops = getStops();
+
+            if (stops.length <= 2) {
+                return;
+            }
+
+            removeButton
+                .closest(
+                    "[data-gradient-stop]",
+                )
+                ?.remove();
+
+            update();
+        },
+    );
+
+    addStopButton.addEventListener(
+        "click",
+        () => {
+            const stops = getStops();
+
+            if (stops.length >= 10) {
+                return;
+            }
+
+            if (stops.length === 0) {
+                createStop("#8B5CF6", 50);
+                return;
+            }
+
+            let bestStart = stops[0];
+            let bestEnd = stops[0];
+            let largestGap = -1;
+
+            for (let index = 0; index < stops.length - 1; index += 1) {
+                const current = stops[index];
+                const next = stops[index + 1];
+                const gap = next.position - current.position;
+
+                if (gap > largestGap) {
+                    largestGap = gap;
+                    bestStart = current;
+                    bestEnd = next;
+                }
+            }
+
+            const position =
+                largestGap > 0
+                    ? Math.round(
+                          (bestStart.position +
+                              bestEnd.position) /
+                              2,
+                      )
+                    : Math.min(
+                          bestStart.position + 1,
+                          100,
+                      );
+
+            createStop(
+                bestStart.color,
+                position,
+            );
+        },
+    );
+
+    typeInput.addEventListener(
+        "change",
+        update,
+    );
+
+    angleInput.addEventListener(
+        "input",
+        update,
+    );
+
+    positionXInput.addEventListener(
+        "input",
+        update,
+    );
+
+    positionYInput.addEventListener(
+        "input",
+        update,
+    );
+
+    copyButton.addEventListener(
+        "click",
+        async () => {
+            const css =
+                getBackgroundCSS();
+
+            try {
+                await navigator.clipboard.writeText(
+                    css,
+                );
+
+                const originalText =
+                    copyButton.textContent;
+
+                copyButton.textContent =
+                    "Copied";
+
+                window.setTimeout(() => {
+                    copyButton.textContent =
+                        originalText;
+                }, 1200);
+            } catch {
+                copyButton.textContent =
+                    "Failed";
+
+                window.setTimeout(() => {
+                    copyButton.textContent =
+                        "Copy";
+                }, 1200);
+            }
+        },
+    );
+
+    update();
+</script>
+
+<style>
+    .css-gradient {
+        width: min(1400px, calc(100% - 2rem));
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 4rem 0;
+    }
+
+    .header {
+        margin-bottom: 2rem;
+    }
+
+    .heading {
+        min-width: 0;
+    }
+
+    .back {
+        display: inline-block;
+        margin-bottom: 2.5rem;
+        color: var(--foreground-muted);
+        font-size: 0.85rem;
+        transition: color 160ms ease;
+    }
+
+    .back:hover {
+        color: var(--foreground);
+    }
+
+    .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--accent);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+    }
+
+    .description {
+        max-width: 520px;
+        margin: 1rem 0 0;
+        color: var(--foreground-muted);
+        line-height: 1.6;
+    }
+
+    .workspace {
+        display: grid;
+        grid-template-columns:
+            minmax(0, 1.15fr)
+            minmax(360px, 0.85fr);
+        min-height: 650px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 0.8rem;
+        background: var(--background-secondary);
+    }
+
+    .panel {
+        min-width: 0;
+    }
+
+    .preview-panel {
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--border);
+    }
+
+    .controls-panel {
+        overflow-y: auto;
+    }
+
+    .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        padding: 0 0.9rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .dimensions {
+        font-weight: 500;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    .preview {
+        position: relative;
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        min-height: 608px;
+        padding: 2rem;
+
+        background:
+            linear-gradient(
+                45deg,
+                var(--background) 25%,
+                transparent 25%
+            ) 0 0 / 24px 24px,
+            linear-gradient(
+                -45deg,
+                var(--background) 25%,
+                transparent 25%
+            ) 0 12px / 24px 24px,
+            linear-gradient(
+                45deg,
+                transparent 75%,
+                var(--background) 75%
+            ) 12px -12px / 24px 24px,
+            linear-gradient(
+                -45deg,
+                transparent 75%,
+                var(--background) 75%
+            ) -12px 0 / 24px 24px,
+            var(--background-secondary);
+    }
+
+    .gradient-preview {
+        width: 100%;
+        height: 100%;
+        min-height: 300px;
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        box-shadow:
+            0 20px 50px rgb(0 0 0 / 18%);
+    }
+
+    .section {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .section:last-child {
+        border-bottom: 0;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .section-header h2 {
+        margin: 0;
+        color: var(--foreground);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .section-header button {
+        padding: 0.45rem 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: 0.45rem;
+        background: var(--background);
+        color: var(--foreground);
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition:
+            border-color 160ms ease,
+            background 160ms ease;
+    }
+
+    .section-header button:hover {
+        border-color: var(--accent);
+        background: var(--background-secondary);
+    }
+
+    .row {
+        display: grid;
+        gap: 0.6rem;
+        margin-bottom: 1rem;
+    }
+
+    .row:last-child {
+        margin-bottom: 0;
+    }
+
+    .row label {
+        display: flex;
+        justify-content: space-between;
+        color: var(--foreground-muted);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .row label span {
+        color: var(--foreground);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .position-editor {
+        display: grid;
+        gap: 0.7rem;
+        margin-top: 1rem;
+    }
+
+    .position-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--foreground-muted);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .position-heading span:last-child {
+        color: var(--foreground);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .position-row {
+        display: grid;
+        grid-template-columns: 18px minmax(0, 1fr) 42px;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .position-row label,
+    .position-row output {
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .position-row output {
+        text-align: right;
+    }
+
+    select {
+        width: 100%;
+        padding: 0.65rem 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        outline: 0;
+        background: var(--background);
+        color: var(--foreground);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.8rem;
+    }
+
+    select:focus {
+        border-color: var(--accent);
+    }
+
+    input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
+
+    .gradient-stop-editor {
+        display: grid;
+        gap: 0.6rem;
+    }
+
+    .gradient-stop {
+        display: grid;
+        grid-template-columns:
+            38px
+            minmax(80px, 90px)
+            minmax(80px, 1fr)
+            42px
+            32px;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem;
+        border: 1px solid var(--border);
+        border-radius: 0.55rem;
+        background: var(--background);
+    }
+
+    .gradient-stop input[type="color"] {
+        width: 38px;
+        height: 30px;
+        padding: 2px;
+        border: 1px solid var(--border);
+        border-radius: 0.35rem;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    .gradient-stop input[type="text"] {
+        width: 100%;
+        min-width: 0;
+        padding: 0.45rem 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: 0.4rem;
+        outline: 0;
+        background: var(--background-secondary);
+        color: var(--foreground);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.7rem;
+    }
+
+    .gradient-stop input[type="text"]:focus {
+        border-color: var(--accent);
+    }
+
+    .gradient-stop output {
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+    }
+
+    .gradient-stop button {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 0.4rem;
+        background: transparent;
+        color: var(--foreground-muted);
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+        transition:
+            border-color 160ms ease,
+            color 160ms ease;
+    }
+
+    .gradient-stop button:hover {
+        border-color: #7f1d1d;
+        color: #fca5a5;
+    }
+
+    .gradient-code {
+        margin: 0;
+        padding: 1rem;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: 0.55rem;
+        background: var(--background);
+        color: var(--foreground);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.75rem;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .gradient-code code {
+        color: var(--foreground);
+    }
+
+    @media (max-width: 900px) {
+        .workspace {
+            grid-template-columns: 1fr;
+        }
+
+        .preview-panel {
+            min-height: 500px;
+            border-right: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview {
+            min-height: 500px;
+        }
+
+        .gradient-preview {
+            min-height: 350px;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .css-gradient {
+            width: min(100% - 1.5rem, 1400px);
+            padding: 2.5rem 0;
+        }
+
+        .back {
+            margin-bottom: 2rem;
+        }
+
+        .gradient-stop {
+            grid-template-columns:
+                38px
+                minmax(70px, 1fr)
+                32px;
+        }
+
+        .gradient-stop input[type="range"] {
+            grid-column: 1 / -1;
+            grid-row: 2;
+        }
+
+        .gradient-stop output {
+            display: none;
+        }
+    }
+</style>
