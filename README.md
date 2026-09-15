@@ -12,6 +12,18 @@ The site contains personal information, social links, and dynamically fetched Gi
 * GitHub REST API
 * GitHub Pages
 
+## Projects
+
+Project pages are automatically discovered from `src/pages/projects/` during the Astro build.
+
+Adding a new `.astro` page to this directory automatically adds it to the Projects section.
+
+### SVG Create
+
+Static SVG generator for creating project-based SVG content directly from Astro.
+
+[View project →](https://kitonoka.github.io/projects/svg-create/)
+
 ## GitHub Projects
 
 Public repositories are fetched from the GitHub API during the Astro build.
