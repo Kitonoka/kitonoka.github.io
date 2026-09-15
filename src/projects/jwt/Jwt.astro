@@ -1,0 +1,1128 @@
+---
+const exampleToken =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30";
+---
+
+<main class="jwt-tool">
+    <header class="header">
+        <div class="heading">
+            <a class="back" href="/">← Kitonoka</a>
+
+            <p class="eyebrow">Project</p>
+
+            <h1>JWT Decoder</h1>
+
+            <p class="description">
+                Decode JSON Web Tokens locally and inspect their header,
+                payload, signature, and common claims.
+            </p>
+        </div>
+    </header>
+
+    <section class="workspace" aria-label="JWT decoder">
+        <section class="panel token-panel">
+            <div class="panel-header">
+                <div>
+                    <span>JWT Token</span>
+                    <span class="panel-description">
+                        Paste a JSON Web Token to inspect its contents.
+                    </span>
+                </div>
+
+                <button
+                    class="button"
+                    id="example-button"
+                    type="button"
+                >
+                    Example
+                </button>
+            </div>
+
+            <textarea
+                id="token-input"
+                class="token-input"
+                spellcheck="false"
+                autocomplete="off"
+                autocapitalize="off"
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            ></textarea>
+
+            <div class="input-footer">
+                <span id="token-status">
+                    Waiting for token
+                </span>
+
+                <button
+                    class="button button-danger"
+                    id="clear-button"
+                    type="button"
+                >
+                    Clear
+                </button>
+            </div>
+        </section>
+
+        <div
+            id="error"
+            class="error"
+            hidden
+        >
+            <span class="error-icon">!</span>
+            <span id="error-message"></span>
+        </div>
+
+        <div id="results" hidden>
+            <div class="sections">
+                <section class="panel">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <span class="section-label">01</span>
+
+                            <div>
+                                <h2>Header</h2>
+                                <p>Decoded JWT header</p>
+                            </div>
+                        </div>
+
+                        <button
+                            class="button copy-button"
+                            type="button"
+                            data-copy-target="header-json"
+                        >
+                            Copy
+                        </button>
+                    </div>
+
+                    <div class="code-container">
+                        <pre id="header-json"></pre>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <span class="section-label">02</span>
+
+                            <div>
+                                <h2>Payload</h2>
+                                <p>Decoded JWT claims</p>
+                            </div>
+                        </div>
+
+                        <button
+                            class="button copy-button"
+                            type="button"
+                            data-copy-target="payload-json"
+                        >
+                            Copy
+                        </button>
+                    </div>
+
+                    <div class="code-container">
+                        <pre id="payload-json"></pre>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="section-header">
+                        <div class="section-title">
+                            <span class="section-label">03</span>
+
+                            <div>
+                                <h2>Signature</h2>
+                                <p>Raw signature segment</p>
+                            </div>
+                        </div>
+
+                        <button
+                            class="button copy-button"
+                            type="button"
+                            data-copy-target="signature"
+                        >
+                            Copy
+                        </button>
+                    </div>
+
+                    <div class="signature-container">
+                        <code id="signature"></code>
+                    </div>
+
+                    <div class="signature-warning">
+                        <span class="warning-icon">!</span>
+
+                        <div>
+                            <strong>
+                                Signature not verified
+                            </strong>
+
+                            <p>
+                                Decoding a JWT does not prove that it is
+                                authentic or trustworthy. This tool only
+                                parses the token and does not verify its
+                                signature.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <section class="panel token-info-panel">
+                <div class="section-header">
+                    <div class="section-title">
+                        <span class="section-label">04</span>
+
+                        <div>
+                            <h2>Token information</h2>
+                            <p>
+                                Common JWT claims and metadata
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-code-container">
+                    <pre id="token-info"></pre>
+                </div>
+            </section>
+        </div>
+    </section>
+</main>
+
+<script define:vars={{ exampleToken }}>
+    const tokenInput =
+        document.querySelector("#token-input");
+
+    const error =
+        document.querySelector("#error");
+
+    const errorMessage =
+        document.querySelector("#error-message");
+
+    const results =
+        document.querySelector("#results");
+
+    const tokenStatus =
+        document.querySelector("#token-status");
+
+    const headerJson =
+        document.querySelector("#header-json");
+
+    const payloadJson =
+        document.querySelector("#payload-json");
+
+    const signature =
+        document.querySelector("#signature");
+
+    const tokenInfo =
+        document.querySelector("#token-info");
+
+    const exampleButton =
+        document.querySelector("#example-button");
+
+    const clearButton =
+        document.querySelector("#clear-button");
+
+    function decodeBase64Url(value) {
+        const normalized =
+            value
+                .replaceAll("-", "+")
+                .replaceAll("_", "/");
+
+        const padding =
+            "=".repeat(
+                (4 - (normalized.length % 4)) % 4,
+            );
+
+        const binary =
+            atob(normalized + padding);
+
+        const bytes =
+            Uint8Array.from(
+                binary,
+                (character) =>
+                    character.charCodeAt(0),
+            );
+
+        return new TextDecoder(
+            "utf-8",
+            { fatal: true },
+        ).decode(bytes);
+    }
+
+    function decodeJsonSegment(segment) {
+        return JSON.parse(
+            decodeBase64Url(segment),
+        );
+    }
+
+    function formatValue(value) {
+        if (Array.isArray(value)) {
+            return value
+                .map((item) => formatValue(item))
+                .join(", ");
+        }
+
+        if (
+            value !== null &&
+            typeof value === "object"
+        ) {
+            return JSON.stringify(value);
+        }
+
+        return String(value);
+    }
+
+    function relativeTime(seconds) {
+        const delta =
+            seconds -
+            Math.floor(
+                Date.now() / 1000,
+            );
+
+        const absolute =
+            Math.abs(delta);
+
+        let value;
+        let unit;
+
+        if (absolute < 60) {
+            value = Math.floor(absolute);
+            unit = "second";
+        } else if (absolute < 3600) {
+            value = Math.floor(
+                absolute / 60,
+            );
+            unit = "minute";
+        } else if (absolute < 86400) {
+            value = Math.floor(
+                absolute / 3600,
+            );
+            unit = "hour";
+        } else {
+            value = Math.floor(
+                absolute / 86400,
+            );
+            unit = "day";
+        }
+
+        value = Math.max(value, 1);
+
+        const suffix =
+            value === 1 ? "" : "s";
+
+        return delta >= 0
+            ? `in ${value} ${unit}${suffix}`
+            : `${value} ${unit}${suffix} ago`;
+    }
+
+    function addInfo(
+        label,
+        value,
+        state = "",
+    ) {
+        const line =
+            document.createElement("div");
+
+        line.className =
+            state
+                ? `info-line ${state}`
+                : "info-line";
+
+        const labelElement =
+            document.createElement("span");
+
+        labelElement.className =
+            "info-key";
+
+        labelElement.textContent =
+            label;
+
+        const separator =
+            document.createElement("span");
+
+        separator.className =
+            "info-separator";
+
+        separator.textContent =
+            ":";
+
+        const valueElement =
+            document.createElement("span");
+
+        valueElement.className =
+            "info-value";
+
+        valueElement.textContent =
+            value;
+
+        line.append(
+            labelElement,
+            separator,
+            valueElement,
+        );
+
+        tokenInfo.appendChild(line);
+    }
+
+    function renderTokenInfo(
+        header,
+        payload,
+    ) {
+        tokenInfo.replaceChildren();
+
+        if (
+            header.alg !== undefined
+        ) {
+            addInfo(
+                "Algorithm",
+                formatValue(header.alg),
+            );
+        }
+
+        if (
+            header.typ !== undefined
+        ) {
+            addInfo(
+                "Type",
+                formatValue(header.typ),
+            );
+        }
+
+        if (
+            typeof payload.iat === "number"
+        ) {
+            addInfo(
+                "Issued",
+                relativeTime(payload.iat),
+            );
+        }
+
+        if (
+            typeof payload.nbf === "number"
+        ) {
+            const now =
+                Math.floor(
+                    Date.now() / 1000,
+                );
+
+            addInfo(
+                "Not before",
+                payload.nbf > now
+                    ? relativeTime(payload.nbf)
+                    : "Active",
+                payload.nbf > now
+                    ? ""
+                    : "active",
+            );
+        }
+
+        if (
+            typeof payload.exp === "number"
+        ) {
+            const now =
+                Math.floor(
+                    Date.now() / 1000,
+                );
+
+            const expired =
+                payload.exp < now;
+
+            addInfo(
+                "Expiration",
+                expired
+                    ? `Expired ${relativeTime(payload.exp)}`
+                    : `Expires ${relativeTime(payload.exp)}`,
+                expired
+                    ? "expired"
+                    : "active",
+            );
+        }
+
+        if (
+            !tokenInfo.children.length
+        ) {
+            const empty =
+                document.createElement("span");
+
+            empty.className =
+                "no-info";
+
+            empty.textContent =
+                "No standard claims found.";
+
+            tokenInfo.appendChild(empty);
+        }
+    }
+
+    function parseToken(token) {
+        const parts =
+            token
+                .trim()
+                .split(".");
+
+        if (parts.length !== 3) {
+            throw new Error(
+                "A JWT must contain exactly three dot-separated segments.",
+            );
+        }
+
+        if (
+            parts.some(
+                (part) => !part,
+            )
+        ) {
+            throw new Error(
+                "The JWT contains an empty segment.",
+            );
+        }
+
+        let header;
+        let payload;
+
+        try {
+            header =
+                decodeJsonSegment(
+                    parts[0],
+                );
+        } catch {
+            throw new Error(
+                "The JWT header is not valid Base64URL JSON.",
+            );
+        }
+
+        try {
+            payload =
+                decodeJsonSegment(
+                    parts[1],
+                );
+        } catch {
+            throw new Error(
+                "The JWT payload is not valid Base64URL JSON.",
+            );
+        }
+
+        if (
+            !header ||
+            typeof header !== "object" ||
+            Array.isArray(header)
+        ) {
+            throw new Error(
+                "The JWT header must contain a JSON object.",
+            );
+        }
+
+        if (
+            !payload ||
+            typeof payload !== "object" ||
+            Array.isArray(payload)
+        ) {
+            throw new Error(
+                "The JWT payload must contain a JSON object.",
+            );
+        }
+
+        return {
+            header,
+            payload,
+            signature: parts[2],
+        };
+    }
+
+    function showError(message) {
+        error.hidden = false;
+
+        errorMessage.textContent =
+            message;
+
+        results.hidden = true;
+
+        tokenStatus.textContent =
+            "Invalid token";
+
+        tokenStatus.classList.add(
+            "invalid",
+        );
+    }
+
+    function update() {
+        const token =
+            tokenInput.value.trim();
+
+        if (!token) {
+            error.hidden = true;
+            results.hidden = true;
+
+            tokenStatus.textContent =
+                "Waiting for token";
+
+            tokenStatus.classList.remove(
+                "invalid",
+            );
+
+            return;
+        }
+
+        try {
+            const {
+                header,
+                payload,
+                signature: rawSignature,
+            } = parseToken(token);
+
+            error.hidden = true;
+
+            tokenStatus.classList.remove(
+                "invalid",
+            );
+
+            tokenStatus.textContent =
+                "Valid JWT structure";
+
+            headerJson.textContent =
+                JSON.stringify(
+                    header,
+                    null,
+                    2,
+                );
+
+            payloadJson.textContent =
+                JSON.stringify(
+                    payload,
+                    null,
+                    2,
+                );
+
+            signature.textContent =
+                rawSignature;
+
+            renderTokenInfo(
+                header,
+                payload,
+            );
+
+            results.hidden = false;
+        } catch (exception) {
+            showError(
+                exception instanceof Error
+                    ? exception.message
+                    : "Unable to decode token.",
+            );
+        }
+    }
+
+    async function copyText(
+        value,
+        button,
+    ) {
+        try {
+            await navigator.clipboard.writeText(
+                value,
+            );
+
+            const original =
+                button.textContent;
+
+            button.textContent =
+                "Copied";
+
+            setTimeout(() => {
+                button.textContent =
+                    original;
+            }, 1200);
+        } catch {
+            button.textContent =
+                "Failed";
+
+            setTimeout(() => {
+                button.textContent =
+                    "Copy";
+            }, 1200);
+        }
+    }
+
+    tokenInput.addEventListener(
+        "input",
+        update,
+    );
+
+    exampleButton.addEventListener(
+        "click",
+        () => {
+            tokenInput.value =
+                exampleToken;
+
+            update();
+        },
+    );
+
+    clearButton.addEventListener(
+        "click",
+        () => {
+            tokenInput.value = "";
+
+            update();
+
+            tokenInput.focus();
+        },
+    );
+
+    document
+        .querySelectorAll(".copy-button")
+        .forEach((button) => {
+            button.addEventListener(
+                "click",
+                () => {
+                    const targetId =
+                        button.getAttribute(
+                            "data-copy-target",
+                        );
+
+                    const target =
+                        targetId
+                            ? document.getElementById(
+                                  targetId,
+                              )
+                            : null;
+
+                    if (target) {
+                        copyText(
+                            target.textContent ?? "",
+                            button,
+                        );
+                    }
+                },
+            );
+        });
+</script>
+
+<style>
+    .jwt-tool {
+        width: min(1400px, calc(100% - 2rem));
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 4rem 0;
+    }
+
+    .header {
+        margin-bottom: 2rem;
+    }
+
+    .heading {
+        min-width: 0;
+    }
+
+    .back {
+        display: inline-block;
+        margin-bottom: 2.5rem;
+        color: var(--foreground-muted);
+        font-size: 0.85rem;
+        transition: color 160ms ease;
+    }
+
+    .back:hover {
+        color: var(--foreground);
+    }
+
+    .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--accent);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+    }
+
+    .description {
+        max-width: 560px;
+        margin: 1rem 0 0;
+        color: var(--foreground-muted);
+        line-height: 1.6;
+    }
+
+    .workspace {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .panel {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 0.8rem;
+        background: var(--background-secondary);
+    }
+
+    .panel-header,
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 42px;
+        padding: 0 0.9rem;
+        box-sizing: border-box;
+        border-bottom: 1px solid var(--border);
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .panel-header > div {
+        min-width: 0;
+    }
+
+    .panel-description {
+        display: block;
+        margin-top: 0.2rem;
+        color: var(--foreground-muted);
+        font-size: 0.72rem;
+        font-weight: 400;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    .button {
+        flex: 0 0 auto;
+        padding: 0.55rem 0.8rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--background);
+        color: var(--foreground);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.75rem;
+        letter-spacing: normal;
+        text-transform: none;
+        transition:
+            border-color 160ms ease,
+            background 160ms ease,
+            transform 160ms ease;
+    }
+
+    .button:hover {
+        border-color: var(--accent);
+        background: var(--background-secondary);
+        transform: translateY(-1px);
+    }
+
+    .button-danger:hover {
+        border-color: #7f1d1d;
+        color: #fca5a5;
+    }
+
+    .token-input {
+        display: block;
+        width: 100%;
+        min-height: 180px;
+        box-sizing: border-box;
+        resize: vertical;
+        padding: 1.25rem;
+        border: 0;
+        outline: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.82rem;
+        line-height: 1.7;
+    }
+
+    .token-input::selection {
+        background: var(--accent);
+        color: white;
+    }
+
+    .token-input::placeholder {
+        color: var(--foreground-muted);
+        opacity: 0.5;
+    }
+
+    .input-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 42px;
+        padding: 0 0.9rem;
+        border-top: 1px solid var(--border);
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+    }
+
+    #token-status.invalid {
+        color: #ef4444;
+    }
+
+    .error {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.8rem 1rem;
+        border: 1px solid #7f1d1d;
+        border-radius: 0.55rem;
+        background: var(--background-secondary);
+        color: #fca5a5;
+        font-size: 0.8rem;
+    }
+
+    .error-icon,
+    .warning-icon {
+        display: grid;
+        flex: 0 0 auto;
+        width: 1.35rem;
+        height: 1.35rem;
+        place-items: center;
+        border-radius: 50%;
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    .error-icon {
+        border: 1px solid currentColor;
+    }
+
+    .sections {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .section-header {
+        min-height: 64px;
+        padding: 0.8rem 0.9rem;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        min-width: 0;
+    }
+
+    .section-label {
+        display: grid;
+        flex: 0 0 auto;
+        width: 2rem;
+        height: 2rem;
+        place-items: center;
+        box-sizing: border-box;
+        border: 1px solid var(--border);
+        border-radius: 0.45rem;
+        color: var(--foreground-muted);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            monospace;
+        font-size: 0.7rem;
+    }
+
+    .section-title > div:last-child {
+        min-width: 0;
+    }
+
+    .section-title h2 {
+        margin: 0;
+        color: var(--foreground);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .section-title p {
+        margin: 0.2rem 0 0;
+        color: var(--foreground-muted);
+        font-size: 0.72rem;
+        font-weight: 400;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    .code-container {
+        width: 100%;
+        max-height: 25rem;
+        box-sizing: border-box;
+        overflow: auto;
+        background: var(--background);
+    }
+
+    .jwt-tool pre {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0;
+        padding: 1.25rem;
+        color: var(--foreground);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.78rem;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .signature-container {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 1.25rem;
+        background: var(--background);
+    }
+
+    .signature-container code {
+        display: block;
+        max-width: 100%;
+        color: var(--foreground);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.78rem;
+        line-height: 1.7;
+        overflow-wrap: anywhere;
+        word-break: break-all;
+    }
+
+    .signature-warning {
+        display: flex;
+        gap: 0.75rem;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.9rem 1rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .warning-icon {
+        border: 1px solid #f59e0b;
+        color: #f59e0b;
+    }
+
+    .signature-warning > div {
+        min-width: 0;
+    }
+
+    .signature-warning strong {
+        color: var(--foreground);
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .signature-warning p {
+        margin: 0.25rem 0 0;
+        color: var(--foreground-muted);
+        font-size: 0.72rem;
+        line-height: 1.5;
+    }
+
+    .info-code-container {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 1.25rem;
+        overflow-x: auto;
+        background: var(--background);
+    }
+
+    .info-code-container pre {
+        margin: 0;
+        padding: 0;
+        color: var(--foreground);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.78rem;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .info-line {
+        display: flex;
+        align-items: baseline;
+        min-width: max-content;
+    }
+
+    .info-key {
+        color: var(--accent);
+        font-weight: 600;
+    }
+
+    .info-separator {
+        margin: 0 0.7rem 0 0.1rem;
+        color: var(--foreground-muted);
+    }
+
+    .info-value {
+        color: var(--foreground);
+        font-weight: 600;
+    }
+
+    .info-line.expired .info-value {
+        color: #ef4444;
+    }
+
+    .info-line.active .info-value {
+        color: #22c55e;
+    }
+
+    .no-info {
+        color: var(--foreground-muted);
+    }
+
+    @media (max-width: 600px) {
+        .jwt-tool {
+            width: min(100% - 1.5rem, 1400px);
+            padding: 2.5rem 0;
+        }
+
+        .back {
+            margin-bottom: 2rem;
+        }
+
+        .panel-header {
+            align-items: flex-start;
+            min-height: auto;
+            padding: 0.8rem 0.9rem;
+        }
+
+        .section-header {
+            min-height: auto;
+            padding: 0.8rem 0.9rem;
+        }
+
+        .info-code-container {
+            padding: 1rem;
+        }
+    }
+</style>
