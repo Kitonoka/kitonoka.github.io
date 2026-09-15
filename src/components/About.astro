@@ -1,0 +1,210 @@
+---
+import { about } from "../data/about";
+---
+
+<section class="about">
+    <div class="about-heading">
+        <p class="eyebrow">About</p>
+        <h2>Who I am</h2>
+    </div>
+
+    <div class="about-content">
+        <div class="about-intro">
+            <div class="identity">
+                <div class="avatar">
+                    {about.name.charAt(0)}
+                </div>
+
+                <div>
+                    <h3>{about.name}</h3>
+                    <p>{about.role}</p>
+                </div>
+            </div>
+
+            <p class="bio">
+                {about.bio}
+            </p>
+        </div>
+
+        <div class="about-details">
+            <div class="detail">
+                <span class="detail-label">Interests</span>
+
+                <div class="tags">
+                    {about.interests.map((interest) => (
+                        <span class="tag">{interest}</span>
+                    ))}
+                </div>
+            </div>
+
+            <div class="detail">
+                <span class="detail-label">Technologies</span>
+
+                <div class="tags">
+                    {about.technologies.map((technology) => (
+                        <span class="tag">{technology}</span>
+                    ))}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .about {
+        padding: 4rem 0;
+        border-top: 1px solid var(--border);
+    }
+
+    .about-heading {
+        margin-bottom: 3rem;
+    }
+
+    .eyebrow {
+        margin: 0 0 0.5rem;
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 3rem);
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .about-content {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+        gap: 5rem;
+        align-items: start;
+    }
+
+    .about-intro {
+        max-width: 650px;
+    }
+
+    .identity {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .avatar {
+        display: grid;
+        width: 3.5rem;
+        height: 3.5rem;
+        flex-shrink: 0;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        background: var(--background-secondary);
+        color: var(--accent);
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+
+    .identity h3 {
+        margin: 0 0 0.25rem;
+        font-size: 1.15rem;
+        letter-spacing: -0.02em;
+    }
+
+    .identity p {
+        margin: 0;
+        color: var(--foreground-muted);
+        font-size: 0.85rem;
+    }
+
+    .bio {
+        margin: 0;
+        color: var(--foreground-muted);
+        font-size: 1.05rem;
+        line-height: 1.8;
+    }
+
+    .about-details {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .detail {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+    }
+
+    .detail-label {
+        color: var(--foreground);
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .tag {
+        padding: 0.45rem 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--background-secondary);
+        color: var(--foreground-muted);
+        font-size: 0.78rem;
+        line-height: 1;
+        transition:
+            border-color 160ms ease,
+            color 160ms ease,
+            background 160ms ease;
+    }
+
+    .tag:hover {
+        border-color: color-mix(
+            in srgb,
+            var(--accent) 50%,
+            var(--border)
+        );
+        background: color-mix(
+            in srgb,
+            var(--background-secondary) 92%,
+            var(--accent)
+        );
+        color: var(--foreground);
+    }
+
+    @media (max-width: 800px) {
+        .about-content {
+            grid-template-columns: 1fr;
+            gap: 3rem;
+        }
+
+        .about-intro {
+            max-width: none;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .about {
+            padding: 3rem 0;
+        }
+
+        .about-heading {
+            margin-bottom: 2rem;
+        }
+
+        .about-content {
+            gap: 2.5rem;
+        }
+
+        .bio {
+            font-size: 0.95rem;
+        }
+    }
+</style>

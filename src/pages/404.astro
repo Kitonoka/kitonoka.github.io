@@ -1,0 +1,83 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+    title="404 · Kitonoka"
+    description="This page could not be found."
+>
+    <main class="error-page">
+        <div class="error-content">
+            <p class="error-code">404</p>
+
+            <h1>Page not found.</h1>
+
+            <p class="description">
+                The page you're looking for doesn't exist or has been
+                moved.
+            </p>
+
+            <a class="home-link" href="/">
+                <span>Return home</span>
+                <span aria-hidden="true">↗</span>
+            </a>
+        </div>
+    </main>
+</BaseLayout>
+
+<style>
+    .error-page {
+        display: grid;
+        min-height: 100vh;
+        place-items: center;
+        padding: 2rem;
+    }
+
+    .error-content {
+        width: min(100%, 600px);
+    }
+
+    .error-code {
+        margin: 0 0 1rem;
+        color: var(--accent);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(3rem, 8vw, 5rem);
+        font-weight: 800;
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+    }
+
+    .description {
+        max-width: 450px;
+        margin: 1.5rem 0 0;
+        color: var(--foreground-muted);
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+
+    .home-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        background: var(--background-secondary);
+        font-size: 0.9rem;
+        transition:
+            border-color 160ms ease,
+            transform 160ms ease;
+    }
+
+    .home-link:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+    }
+</style>

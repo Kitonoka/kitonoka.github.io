@@ -1,0 +1,116 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import About from "../components/About.astro";
+import GithubProjects from "../components/GithubProjects.astro";
+import Socials from "../components/Socials.astro";
+---
+
+<BaseLayout
+    title="Kitonoka"
+    description="Kitonoka's personal developer website."
+>
+    <main class="site">
+        <section class="hero">
+            <p class="eyebrow">Developer</p>
+
+            <h1>Kitonoka</h1>
+
+            <p class="hero-description">
+                I build software, experiment with technology,
+                and work on projects across development,
+                cybersecurity, game development, and Linux.
+            </p>
+
+            <div class="hero-links">
+                <a
+                    href="https://github.com/Kitonoka"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    GitHub
+                    <span aria-hidden="true">↗</span>
+                </a>
+            </div>
+        </section>
+
+        <About />
+
+        <GithubProjects />
+
+        <Socials />
+    </main>
+</BaseLayout>
+
+<style>
+    .site {
+        width: min(1100px, calc(100% - 2rem));
+        margin: 0 auto;
+        padding: 7rem 0 5rem;
+    }
+
+    .hero {
+        max-width: 800px;
+        padding-bottom: 5rem;
+    }
+
+    .eyebrow {
+        margin: 0 0 1rem;
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(4rem, 12vw, 8rem);
+        font-weight: 800;
+        letter-spacing: -0.075em;
+        line-height: 0.9;
+    }
+
+    .hero-description {
+        max-width: 650px;
+        margin: 2rem 0 0;
+        color: var(--foreground-muted);
+        font-size: clamp(1rem, 2vw, 1.2rem);
+        line-height: 1.7;
+    }
+
+    .hero-links {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 2rem;
+    }
+
+    .hero-links a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        background: var(--background-secondary);
+        font-size: 0.9rem;
+        transition:
+            border-color 160ms ease,
+            transform 160ms ease;
+    }
+
+    .hero-links a:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 600px) {
+        .site {
+            width: min(100% - 1.5rem, 1100px);
+            padding-top: 4rem;
+        }
+
+        .hero {
+            padding-bottom: 3rem;
+        }
+    }
+</style>

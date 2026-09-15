@@ -1,0 +1,117 @@
+---
+import { socials } from "../data/socials";
+---
+
+<section class="socials">
+    <div class="section-heading">
+        <p class="eyebrow">Connect</p>
+        <h2>Socials</h2>
+    </div>
+
+    <div class="social-list">
+        {socials.map((social) => (
+            <a
+                class="social"
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                <div>
+                    <span class="social-name">{social.name}</span>
+                    <span class="social-label">{social.label}</span>
+                </div>
+
+                <span class="arrow" aria-hidden="true">↗</span>
+            </a>
+        ))}
+    </div>
+</section>
+
+<style>
+    .socials {
+        margin-top: 7rem;
+        padding-top: 4rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .section-heading {
+        margin-bottom: 2rem;
+    }
+
+    .eyebrow {
+        margin: 0 0 0.5rem;
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 3rem);
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .social-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .social {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.5rem;
+        border: 1px solid var(--border);
+        border-radius: 0.9rem;
+        background: var(--background-secondary);
+        transition:
+            border-color 160ms ease,
+            transform 160ms ease;
+    }
+
+    .social:hover {
+        border-color: color-mix(
+            in srgb,
+            var(--accent) 45%,
+            var(--border)
+        );
+        transform: translateY(-2px);
+    }
+
+    .social > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .social-name {
+        font-weight: 600;
+    }
+
+    .social-label {
+        color: var(--foreground-muted);
+        font-size: 0.8rem;
+    }
+
+    .arrow {
+        color: var(--foreground-muted);
+        transition:
+            color 160ms ease,
+            transform 160ms ease;
+    }
+
+    .social:hover .arrow {
+        color: var(--accent);
+        transform: translate(2px, -2px);
+    }
+
+    @media (max-width: 650px) {
+        .social-list {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
