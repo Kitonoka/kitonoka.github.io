@@ -24,6 +24,12 @@ Static SVG generator for creating project-based SVG content directly from Astro.
 
 [View project →](https://kitonoka.github.io/projects/svg-create/)
 
+### CSS Gradient
+
+Visual CSS gradient generator with support for linear, radial, and conic gradients, including color stops, positioning, and live CSS output.
+
+[View project →](https://kitonoka.github.io/projects/css-gradient/)
+
 ## GitHub Projects
 
 Public repositories are fetched from the GitHub API during the Astro build.
