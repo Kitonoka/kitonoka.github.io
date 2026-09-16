@@ -1,0 +1,2615 @@
+```astro
+---
+const defaultData = `Jan,42
+Feb,58
+Mar,51
+Apr,76
+May,68
+Jun,92`;
+
+const defaultTitle = "Monthly growth";
+---
+
+<main class="graph">
+    <header class="header">
+        <div class="heading">
+            <a class="back" href="/">← Kitonoka</a>
+
+            <p class="eyebrow">Project</p>
+
+            <h1>Graph</h1>
+
+            <p class="description">
+                Create clean, customizable charts and export them anywhere.
+            </p>
+        </div>
+
+        <div class="actions">
+            <button id="reset" type="button">Reset</button>
+
+            <button id="copy-svg" type="button">
+                Copy SVG
+            </button>
+
+            <div class="export">
+                <button
+                    id="export"
+                    class="primary export-trigger"
+                    type="button"
+                    aria-expanded="false"
+                >
+                    Export
+                    <span>⌄</span>
+                </button>
+
+                <div
+                    id="export-menu"
+                    class="export-menu"
+                    hidden
+                >
+                    <button data-export="svg" type="button">
+                        SVG
+                        <span>Vector</span>
+                    </button>
+
+                    <button data-export="png" type="button">
+                        PNG
+                        <span>Image</span>
+                    </button>
+
+                    <button data-export="webp" type="button">
+                        WebP
+                        <span>Image</span>
+                    </button>
+
+                    <button data-export="jpeg" type="button">
+                        JPEG
+                        <span>Image</span>
+                    </button>
+
+                    <button data-export="json" type="button">
+                        JSON
+                        <span>Data</span>
+                    </button>
+
+                    <button data-export="csv" type="button">
+                        CSV
+                        <span>Data</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="workspace" aria-label="Graph editor">
+        <aside class="sidebar">
+            <div class="section">
+                <div class="section-title">
+                    <span>Chart</span>
+                </div>
+
+                <label>
+                    <span>Type</span>
+
+                    <select id="chart-type">
+                        <option value="line">Line</option>
+                        <option value="area">Area</option>
+                        <option value="bar">Bar</option>
+                        <option value="horizontal-bar">
+                            Horizontal bar
+                        </option>
+                        <option value="scatter">Scatter</option>
+                        <option value="donut">Donut</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Title</span>
+
+                    <input
+                        id="title"
+                        type="text"
+                        value={defaultTitle}
+                        spellcheck="false"
+                    />
+                </label>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span>Appearance</span>
+                </div>
+
+                <label class="color-field">
+                    <span>Accent</span>
+
+                    <input
+                        id="accent"
+                        type="color"
+                        value="#8b5cf6"
+                    />
+                </label>
+
+                <label class="color-field">
+                    <span>Background</span>
+
+                    <input
+                        id="chart-background"
+                        type="color"
+                        value="#09090b"
+                    />
+                </label>
+
+                <label class="toggle">
+                    <input
+                        id="show-grid"
+                        type="checkbox"
+                        checked
+                    />
+
+                    <span class="toggle-ui"></span>
+                    <span>Grid</span>
+                </label>
+
+                <label class="toggle">
+                    <input
+                        id="show-labels"
+                        type="checkbox"
+                        checked
+                    />
+
+                    <span class="toggle-ui"></span>
+                    <span>Labels</span>
+                </label>
+
+                <label class="toggle">
+                    <input
+                        id="show-values"
+                        type="checkbox"
+                    />
+
+                    <span class="toggle-ui"></span>
+                    <span>Values</span>
+                </label>
+            </div>
+
+            <div class="section data-section">
+                <div class="section-title">
+                    <span>Data</span>
+
+                    <span id="data-count">
+                        6 points
+                    </span>
+                </div>
+
+                <textarea
+                    id="data"
+                    spellcheck="false"
+                    autocapitalize="off"
+                    autocomplete="off"
+                    autocorrect="off"
+                    aria-label="Chart data"
+                >{defaultData}</textarea>
+
+                <p class="hint">
+                    One point per line:
+                    <code>label,value</code>
+                </p>
+            </div>
+
+            <div class="sidebar-footer">
+                <span id="status">Ready</span>
+                <span id="dimensions">1200 × 630</span>
+            </div>
+        </aside>
+
+        <section class="canvas-panel">
+            <div class="canvas-header">
+                <span>Preview</span>
+
+                <div class="canvas-actions">
+                    <button
+                        id="zoom-out"
+                        type="button"
+                        aria-label="Zoom out"
+                    >
+                        −
+                    </button>
+
+                    <span id="zoom">100%</span>
+
+                    <button
+                        id="zoom-in"
+                        type="button"
+                        aria-label="Zoom in"
+                    >
+                        +
+                    </button>
+
+                    <button
+                        id="fit"
+                        type="button"
+                    >
+                        Fit
+                    </button>
+                </div>
+            </div>
+
+            <div
+                id="canvas-wrap"
+                class="canvas-wrap"
+            >
+                <canvas
+                    id="canvas"
+                    width="1200"
+                    height="630"
+                ></canvas>
+
+                <div
+                    id="canvas-error"
+                    class="canvas-error"
+                    hidden
+                ></div>
+            </div>
+        </section>
+    </section>
+</main>
+
+<script define:vars={{ defaultData, defaultTitle }}>
+    const $ = (selector) =>
+        document.querySelector(selector);
+
+    const canvas = $("#canvas");
+    const context = canvas?.getContext("2d");
+
+    const dataInput = $("#data");
+    const titleInput = $("#title");
+    const chartType = $("#chart-type");
+    const accentInput = $("#accent");
+    const backgroundInput = $("#chart-background");
+
+    const showGrid = $("#show-grid");
+    const showLabels = $("#show-labels");
+    const showValues = $("#show-values");
+
+    const status = $("#status");
+    const dimensions = $("#dimensions");
+    const dataCount = $("#data-count");
+    const error = $("#canvas-error");
+
+    const exportButton = $("#export");
+    const exportMenu = $("#export-menu");
+    const copySvgButton = $("#copy-svg");
+
+    const resetButton = $("#reset");
+    const zoomLabel = $("#zoom");
+
+    if (
+        !(canvas instanceof HTMLCanvasElement) ||
+        !context ||
+        !(dataInput instanceof HTMLTextAreaElement) ||
+        !(titleInput instanceof HTMLInputElement) ||
+        !(chartType instanceof HTMLSelectElement) ||
+        !(accentInput instanceof HTMLInputElement) ||
+        !(backgroundInput instanceof HTMLInputElement) ||
+        !(showGrid instanceof HTMLInputElement) ||
+        !(showLabels instanceof HTMLInputElement) ||
+        !(showValues instanceof HTMLInputElement) ||
+        !(status instanceof HTMLElement) ||
+        !(dimensions instanceof HTMLElement) ||
+        !(dataCount instanceof HTMLElement) ||
+        !(error instanceof HTMLElement) ||
+        !(exportButton instanceof HTMLButtonElement) ||
+        !(exportMenu instanceof HTMLElement) ||
+        !(copySvgButton instanceof HTMLButtonElement) ||
+        !(resetButton instanceof HTMLButtonElement)
+    ) {
+        throw new Error("Graph failed to initialize.");
+    }
+
+    const WIDTH = 1200;
+    const HEIGHT = 630;
+
+    const PADDING = {
+        top: 86,
+        right: 70,
+        bottom: 78,
+        left: 88,
+    };
+
+    let zoom = 1;
+
+    const escapeXml = (value) =>
+        String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&apos;");
+
+    const parseData = () => {
+        const points = dataInput.value
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+                const comma = line.indexOf(",");
+
+                if (comma === -1) {
+                    return null;
+                }
+
+                const label = line
+                    .slice(0, comma)
+                    .trim();
+
+                const value = Number(
+                    line.slice(comma + 1).trim()
+                );
+
+                if (
+                    !label ||
+                    !Number.isFinite(value)
+                ) {
+                    return null;
+                }
+
+                return { label, value };
+            })
+            .filter(Boolean);
+
+        return points;
+    };
+
+    const niceMax = (value) => {
+        if (!Number.isFinite(value) || value <= 0) {
+            return 10;
+        }
+
+        const magnitude =
+            10 ** Math.floor(Math.log10(value));
+
+        const normalized = value / magnitude;
+
+        let step;
+
+        if (normalized <= 1) {
+            step = 1;
+        } else if (normalized <= 2) {
+            step = 2;
+        } else if (normalized <= 5) {
+            step = 5;
+        } else {
+            step = 10;
+        }
+
+        return step * magnitude;
+    };
+
+    const formatNumber = (value) => {
+        if (Number.isInteger(value)) {
+            return String(value);
+        }
+
+        return value
+            .toFixed(2)
+            .replace(/\.?0+$/, "");
+    };
+
+    const colors = {
+        text: "#fafafa",
+        muted: "#a1a1aa",
+        grid: "#27272a",
+        border: "#3f3f46",
+        accent: () => accentInput.value,
+    };
+
+    const roundRect = (
+        ctx,
+        x,
+        y,
+        width,
+        height,
+        radius
+    ) => {
+        const r = Math.min(
+            radius,
+            width / 2,
+            height / 2
+        );
+
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(
+            x + width,
+            y,
+            x + width,
+            y + height,
+            r
+        );
+        ctx.arcTo(
+            x + width,
+            y + height,
+            x,
+            y + height,
+            r
+        );
+        ctx.arcTo(
+            x,
+            y + height,
+            x,
+            y,
+            r
+        );
+        ctx.arcTo(
+            x,
+            y,
+            x + width,
+            y,
+            r
+        );
+        ctx.closePath();
+    };
+
+    const drawText = (
+        text,
+        x,
+        y,
+        options = {}
+    ) => {
+        context.save();
+
+        context.fillStyle =
+            options.color ?? colors.text;
+
+        context.font =
+            options.font ??
+            "500 14px Inter, system-ui, sans-serif";
+
+        context.textAlign =
+            options.align ?? "left";
+
+        context.textBaseline =
+            options.baseline ?? "middle";
+
+        context.fillText(
+            text,
+            x,
+            y
+        );
+
+        context.restore();
+    };
+
+    const getPlot = () => ({
+        x: PADDING.left,
+        y: PADDING.top,
+        width:
+            WIDTH -
+            PADDING.left -
+            PADDING.right,
+        height:
+            HEIGHT -
+            PADDING.top -
+            PADDING.bottom,
+    });
+
+    const drawGrid = (
+        plot,
+        maxValue,
+        horizontal = false
+    ) => {
+        if (!showGrid.checked) {
+            return;
+        }
+
+        context.save();
+
+        context.strokeStyle =
+            colors.grid;
+
+        context.lineWidth = 1;
+
+        const steps = 5;
+
+        for (let i = 0; i <= steps; i++) {
+            const ratio = i / steps;
+
+            if (!horizontal) {
+                const y =
+                    plot.y +
+                    plot.height -
+                    ratio * plot.height;
+
+                context.beginPath();
+                context.moveTo(
+                    plot.x,
+                    Math.round(y) + 0.5
+                );
+                context.lineTo(
+                    plot.x + plot.width,
+                    Math.round(y) + 0.5
+                );
+                context.stroke();
+
+                drawText(
+                    formatNumber(
+                        maxValue * ratio
+                    ),
+                    plot.x - 16,
+                    y,
+                    {
+                        color: colors.muted,
+                        font:
+                            "500 12px Inter, system-ui, sans-serif",
+                        align: "right",
+                    }
+                );
+            }
+        }
+
+        context.restore();
+    };
+
+    const drawLabels = (
+        points,
+        plot
+    ) => {
+        if (!showLabels.checked) {
+            return;
+        }
+
+        context.save();
+
+        const maxLabels = 12;
+        const stride = Math.max(
+            1,
+            Math.ceil(
+                points.length / maxLabels
+            )
+        );
+
+        points.forEach((point, index) => {
+            if (
+                index % stride !== 0 &&
+                index !== points.length - 1
+            ) {
+                return;
+            }
+
+            const x =
+                points.length === 1
+                    ? plot.x + plot.width / 2
+                    : plot.x +
+                      (index /
+                          (points.length - 1)) *
+                          plot.width;
+
+            drawText(
+                point.label,
+                x,
+                plot.y + plot.height + 28,
+                {
+                    color: colors.muted,
+                    font:
+                        "500 12px Inter, system-ui, sans-serif",
+                    align: "center",
+                }
+            );
+        });
+
+        context.restore();
+    };
+
+    const drawTitle = () => {
+        const title =
+            titleInput.value.trim();
+
+        if (!title) {
+            return;
+        }
+
+        drawText(
+            title,
+            PADDING.left,
+            42,
+            {
+                font:
+                    "700 24px Inter, system-ui, sans-serif",
+            }
+        );
+    };
+
+    const drawLine = (
+        points,
+        plot,
+        maxValue,
+        fill = false
+    ) => {
+        if (!points.length) {
+            return;
+        }
+
+        const coordinates = points.map(
+            (point, index) => ({
+                x:
+                    points.length === 1
+                        ? plot.x +
+                          plot.width / 2
+                        : plot.x +
+                          (index /
+                              (points.length - 1)) *
+                              plot.width,
+                y:
+                    plot.y +
+                    plot.height -
+                    (point.value / maxValue) *
+                        plot.height,
+            })
+        );
+
+        if (fill) {
+            context.save();
+
+            const gradient =
+                context.createLinearGradient(
+                    0,
+                    plot.y,
+                    0,
+                    plot.y + plot.height
+                );
+
+            gradient.addColorStop(
+                0,
+                `${colors.accent()}55`
+            );
+
+            gradient.addColorStop(
+                1,
+                `${colors.accent()}00`
+            );
+
+            context.beginPath();
+            context.moveTo(
+                coordinates[0].x,
+                plot.y + plot.height
+            );
+
+            coordinates.forEach(
+                (point) =>
+                    context.lineTo(
+                        point.x,
+                        point.y
+                    )
+            );
+
+            context.lineTo(
+                coordinates.at(-1).x,
+                plot.y + plot.height
+            );
+
+            context.closePath();
+
+            context.fillStyle = gradient;
+            context.fill();
+
+            context.restore();
+        }
+
+        context.save();
+
+        context.beginPath();
+
+        coordinates.forEach(
+            (point, index) => {
+                if (index === 0) {
+                    context.moveTo(
+                        point.x,
+                        point.y
+                    );
+                } else {
+                    context.lineTo(
+                        point.x,
+                        point.y
+                    );
+                }
+            }
+        );
+
+        context.strokeStyle =
+            colors.accent();
+
+        context.lineWidth = 3;
+        context.lineJoin = "round";
+        context.lineCap = "round";
+        context.stroke();
+
+        context.restore();
+
+        coordinates.forEach(
+            (point, index) => {
+                context.save();
+
+                context.beginPath();
+                context.arc(
+                    point.x,
+                    point.y,
+                    5,
+                    0,
+                    Math.PI * 2
+                );
+
+                context.fillStyle =
+                    backgroundInput.value;
+
+                context.fill();
+
+                context.strokeStyle =
+                    colors.accent();
+
+                context.lineWidth = 3;
+                context.stroke();
+
+                context.restore();
+
+                if (showValues.checked) {
+                    drawText(
+                        formatNumber(
+                            points[index].value
+                        ),
+                        point.x,
+                        point.y - 18,
+                        {
+                            color: colors.text,
+                            font:
+                                "600 12px Inter, system-ui, sans-serif",
+                            align: "center",
+                        }
+                    );
+                }
+            }
+        );
+    };
+
+    const drawBars = (
+        points,
+        plot,
+        maxValue,
+        horizontal = false
+    ) => {
+        if (!points.length) {
+            return;
+        }
+
+        const gap = Math.min(
+            18,
+            plot.width /
+                Math.max(points.length, 1) /
+                5
+        );
+
+        if (horizontal) {
+            const maxLabelLength = Math.max(
+                ...points.map(
+                    (point) =>
+                        point.label.length
+                )
+            );
+
+            const labelWidth = Math.min(
+                150,
+                Math.max(70, maxLabelLength * 7)
+            );
+
+            const usableWidth =
+                plot.width - labelWidth;
+
+            const barHeight = Math.max(
+                8,
+                Math.min(
+                    42,
+                    plot.height /
+                        points.length -
+                        gap
+                )
+            );
+
+            points.forEach(
+                (point, index) => {
+                    const y =
+                        plot.y +
+                        (index + 0.5) *
+                            (plot.height /
+                                points.length) -
+                        barHeight / 2;
+
+                    const width =
+                        (point.value /
+                            maxValue) *
+                        usableWidth;
+
+                    context.save();
+
+                    roundRect(
+                        context,
+                        plot.x +
+                            labelWidth,
+                        y,
+                        width,
+                        barHeight,
+                        6
+                    );
+
+                    context.fillStyle =
+                        colors.accent();
+
+                    context.fill();
+
+                    context.restore();
+
+                    drawText(
+                        point.label,
+                        plot.x +
+                            labelWidth -
+                            14,
+                        y + barHeight / 2,
+                        {
+                            color: colors.muted,
+                            font:
+                                "500 12px Inter, system-ui, sans-serif",
+                            align: "right",
+                        }
+                    );
+
+                    if (showValues.checked) {
+                        drawText(
+                            formatNumber(
+                                point.value
+                            ),
+                            plot.x +
+                                labelWidth +
+                                width +
+                                10,
+                            y + barHeight / 2,
+                            {
+                                color: colors.text,
+                                font:
+                                    "600 12px Inter, system-ui, sans-serif",
+                            }
+                        );
+                    }
+                }
+            );
+
+            return;
+        }
+
+        const slot =
+            plot.width / points.length;
+
+        const barWidth = Math.max(
+            8,
+            slot - gap
+        );
+
+        points.forEach(
+            (point, index) => {
+                const height =
+                    (point.value /
+                        maxValue) *
+                    plot.height;
+
+                const x =
+                    plot.x +
+                    index * slot +
+                    (slot - barWidth) / 2;
+
+                const y =
+                    plot.y +
+                    plot.height -
+                    height;
+
+                context.save();
+
+                roundRect(
+                    context,
+                    x,
+                    y,
+                    barWidth,
+                    height,
+                    6
+                );
+
+                context.fillStyle =
+                    colors.accent();
+
+                context.fill();
+
+                context.restore();
+
+                if (showValues.checked) {
+                    drawText(
+                        formatNumber(
+                            point.value
+                        ),
+                        x + barWidth / 2,
+                        y - 14,
+                        {
+                            color: colors.text,
+                            font:
+                                "600 12px Inter, system-ui, sans-serif",
+                            align: "center",
+                        }
+                    );
+                }
+            }
+        );
+    };
+
+    const drawScatter = (
+        points,
+        plot,
+        maxValue
+    ) => {
+        points.forEach(
+            (point, index) => {
+                const x =
+                    points.length === 1
+                        ? plot.x +
+                          plot.width / 2
+                        : plot.x +
+                          (index /
+                              (points.length - 1)) *
+                              plot.width;
+
+                const y =
+                    plot.y +
+                    plot.height -
+                    (point.value / maxValue) *
+                        plot.height;
+
+                context.save();
+
+                context.beginPath();
+
+                context.arc(
+                    x,
+                    y,
+                    7,
+                    0,
+                    Math.PI * 2
+                );
+
+                context.fillStyle =
+                    colors.accent();
+
+                context.globalAlpha = 0.9;
+                context.fill();
+
+                context.restore();
+
+                if (showValues.checked) {
+                    drawText(
+                        formatNumber(
+                            point.value
+                        ),
+                        x,
+                        y - 18,
+                        {
+                            color: colors.text,
+                            font:
+                                "600 12px Inter, system-ui, sans-serif",
+                            align: "center",
+                        }
+                    );
+                }
+            }
+        );
+    };
+
+    const drawDonut = (
+        points
+    ) => {
+        const total = points.reduce(
+            (sum, point) =>
+                sum + Math.max(point.value, 0),
+            0
+        );
+
+        if (total <= 0) {
+            return;
+        }
+
+        const centerX = WIDTH / 2;
+        const centerY =
+            HEIGHT / 2 + 12;
+
+        const radius = 160;
+        const innerRadius = 102;
+
+        let angle = -Math.PI / 2;
+
+        points.forEach(
+            (point, index) => {
+                const value =
+                    Math.max(
+                        point.value,
+                        0
+                    );
+
+                const slice =
+                    (value / total) *
+                    Math.PI *
+                    2;
+
+                const hue =
+                    index *
+                    (280 / Math.max(
+                        points.length,
+                        1
+                    ));
+
+                const lightness =
+                    62 -
+                    Math.min(
+                        index * 3,
+                        18
+                    );
+
+                const color =
+                    index === 0
+                        ? colors.accent()
+                        : `hsl(${hue}, 70%, ${lightness}%)`;
+
+                context.save();
+
+                context.beginPath();
+
+                context.arc(
+                    centerX,
+                    centerY,
+                    radius,
+                    angle,
+                    angle + slice
+                );
+
+                context.arc(
+                    centerX,
+                    centerY,
+                    innerRadius,
+                    angle + slice,
+                    angle,
+                    true
+                );
+
+                context.closePath();
+
+                context.fillStyle = color;
+                context.fill();
+
+                context.restore();
+
+                angle += slice;
+            }
+        );
+
+        drawText(
+            formatNumber(total),
+            centerX,
+            centerY - 5,
+            {
+                color: colors.text,
+                font:
+                    "800 28px Inter, system-ui, sans-serif",
+                align: "center",
+            }
+        );
+
+        drawText(
+            "Total",
+            centerX,
+            centerY + 25,
+            {
+                color: colors.muted,
+                font:
+                    "500 12px Inter, system-ui, sans-serif",
+                align: "center",
+            }
+        );
+
+        const legendX = 48;
+        const legendY =
+            HEIGHT - 34;
+
+        points.slice(0, 8).forEach(
+            (point, index) => {
+                const x =
+                    legendX +
+                    index * 135;
+
+                const hue =
+                    index *
+                    (280 / Math.max(
+                        points.length,
+                        1
+                    ));
+
+                const color =
+                    index === 0
+                        ? colors.accent()
+                        : `hsl(${hue}, 70%, 62%)`;
+
+                context.save();
+
+                context.fillStyle = color;
+
+                roundRect(
+                    context,
+                    x,
+                    legendY - 6,
+                    8,
+                    8,
+                    3
+                );
+
+                context.fill();
+
+                context.restore();
+
+                drawText(
+                    point.label,
+                    x + 15,
+                    legendY - 2,
+                    {
+                        color: colors.muted,
+                        font:
+                            "500 11px Inter, system-ui, sans-serif",
+                    }
+                );
+            }
+        );
+    };
+
+    const draw = () => {
+        const points = parseData();
+
+        dataCount.textContent =
+            `${points.length} ${
+                points.length === 1
+                    ? "point"
+                    : "points"
+            }`;
+
+        context.clearRect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        context.fillStyle =
+            backgroundInput.value;
+
+        context.fillRect(
+            0,
+            0,
+            WIDTH,
+            HEIGHT
+        );
+
+        drawTitle();
+
+        if (!points.length) {
+            drawText(
+                "No valid data",
+                WIDTH / 2,
+                HEIGHT / 2,
+                {
+                    color: colors.muted,
+                    font:
+                        "600 16px Inter, system-ui, sans-serif",
+                    align: "center",
+                }
+            );
+
+            status.textContent = "Empty";
+            error.textContent =
+                "Add data using label,value format.";
+
+            error.hidden = false;
+
+            return;
+        }
+
+        error.hidden = true;
+
+        const type = chartType.value;
+
+        if (type === "donut") {
+            drawDonut(points);
+            status.textContent = "Valid";
+            return;
+        }
+
+        const plot = getPlot();
+
+        const maxValue = niceMax(
+            Math.max(
+                ...points.map(
+                    (point) =>
+                        Math.max(
+                            point.value,
+                            0
+                        )
+                )
+            )
+        );
+
+        drawGrid(
+            plot,
+            maxValue,
+            type === "horizontal-bar"
+        );
+
+        if (
+            type === "line" ||
+            type === "area"
+        ) {
+            drawLine(
+                points,
+                plot,
+                maxValue,
+                type === "area"
+            );
+        } else if (type === "bar") {
+            drawBars(
+                points,
+                plot,
+                maxValue
+            );
+        } else if (
+            type === "horizontal-bar"
+        ) {
+            drawBars(
+                points,
+                plot,
+                maxValue,
+                true
+            );
+        } else if (type === "scatter") {
+            drawScatter(
+                points,
+                plot,
+                maxValue
+            );
+        }
+
+        drawLabels(points, plot);
+
+        dimensions.textContent =
+            `${WIDTH} × ${HEIGHT}`;
+
+        status.textContent = "Valid";
+    };
+
+    const canvasToSvg = () => {
+        const points = parseData();
+        const type = chartType.value;
+        const title =
+            titleInput.value.trim();
+
+        const background =
+            backgroundInput.value;
+
+        const accent =
+            accentInput.value;
+
+        const plot = getPlot();
+
+        const maxValue = niceMax(
+            Math.max(
+                ...points.map(
+                    (point) =>
+                        Math.max(
+                            point.value,
+                            0
+                        )
+                )
+            )
+        );
+
+        const elements = [];
+
+        elements.push(
+            `<rect width="${WIDTH}" height="${HEIGHT}" rx="18" fill="${escapeXml(background)}"/>`
+        );
+
+        if (title) {
+            elements.push(
+                `<text x="${PADDING.left}" y="48" fill="#fafafa" font-family="Inter,system-ui,sans-serif" font-size="24" font-weight="700">${escapeXml(title)}</text>`
+            );
+        }
+
+        if (type === "donut") {
+            const cx = WIDTH / 2;
+            const cy = HEIGHT / 2 + 12;
+            const outer = 160;
+            const inner = 102;
+
+            const total = points.reduce(
+                (sum, point) =>
+                    sum +
+                    Math.max(
+                        point.value,
+                        0
+                    ),
+                0
+            );
+
+            let angle =
+                -Math.PI / 2;
+
+            points.forEach(
+                (point, index) => {
+                    const value =
+                        Math.max(
+                            point.value,
+                            0
+                        );
+
+                    const slice =
+                        total > 0
+                            ? (value /
+                                  total) *
+                              Math.PI *
+                              2
+                            : 0;
+
+                    const start = angle;
+                    const end =
+                        angle + slice;
+
+                    const x1 =
+                        cx +
+                        outer *
+                            Math.cos(start);
+
+                    const y1 =
+                        cy +
+                        outer *
+                            Math.sin(start);
+
+                    const x2 =
+                        cx +
+                        outer *
+                            Math.cos(end);
+
+                    const y2 =
+                        cy +
+                        outer *
+                            Math.sin(end);
+
+                    const ix1 =
+                        cx +
+                        inner *
+                            Math.cos(end);
+
+                    const iy1 =
+                        cy +
+                        inner *
+                            Math.sin(end);
+
+                    const ix2 =
+                        cx +
+                        inner *
+                            Math.cos(start);
+
+                    const iy2 =
+                        cy +
+                        inner *
+                            Math.sin(start);
+
+                    const large =
+                        slice > Math.PI
+                            ? 1
+                            : 0;
+
+                    const color =
+                        index === 0
+                            ? accent
+                            : `hsl(${index * (280 / Math.max(points.length, 1))}, 70%, 62%)`;
+
+                    elements.push(
+                        `<path d="M ${x1} ${y1} A ${outer} ${outer} 0 ${large} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${inner} ${inner} 0 ${large} 0 ${ix2} ${iy2} Z" fill="${color}"/>`
+                    );
+
+                    angle = end;
+                }
+            );
+
+            elements.push(
+                `<text x="${cx}" y="${cy - 2}" fill="#fafafa" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="800" text-anchor="middle">${escapeXml(formatNumber(total))}</text>`
+            );
+
+            elements.push(
+                `<text x="${cx}" y="${cy + 25}" fill="#a1a1aa" font-family="Inter,system-ui,sans-serif" font-size="12" text-anchor="middle">Total</text>`
+            );
+        } else {
+            if (showGrid.checked) {
+                for (let i = 0; i <= 5; i++) {
+                    const ratio = i / 5;
+                    const y =
+                        plot.y +
+                        plot.height -
+                        ratio * plot.height;
+
+                    elements.push(
+                        `<line x1="${plot.x}" y1="${y}" x2="${plot.x + plot.width}" y2="${y}" stroke="#27272a"/>`
+                    );
+
+                    elements.push(
+                        `<text x="${plot.x - 16}" y="${y + 4}" fill="#a1a1aa" font-family="Inter,system-ui,sans-serif" font-size="12" text-anchor="end">${escapeXml(formatNumber(maxValue * ratio))}</text>`
+                    );
+                }
+            }
+
+            if (
+                type === "line" ||
+                type === "area"
+            ) {
+                const coords =
+                    points.map(
+                        (point, index) => {
+                            const x =
+                                points.length === 1
+                                    ? plot.x +
+                                      plot.width /
+                                          2
+                                    : plot.x +
+                                      (index /
+                                          (points.length -
+                                              1)) *
+                                          plot.width;
+
+                            const y =
+                                plot.y +
+                                plot.height -
+                                (point.value /
+                                    maxValue) *
+                                    plot.height;
+
+                            return { x, y };
+                        }
+                    );
+
+                const linePath =
+                    coords
+                        .map(
+                            (point, index) =>
+                                `${
+                                    index === 0
+                                        ? "M"
+                                        : "L"
+                                } ${point.x} ${point.y}`
+                        )
+                        .join(" ");
+
+                if (type === "area") {
+                    const areaPath =
+                        `${linePath} L ${coords.at(-1).x} ${plot.y + plot.height} L ${coords[0].x} ${plot.y + plot.height} Z`;
+
+                    elements.push(
+                        `<path d="${areaPath}" fill="${accent}" opacity="0.22"/>`
+                    );
+                }
+
+                elements.push(
+                    `<path d="${linePath}" fill="none" stroke="${accent}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`
+                );
+
+                coords.forEach(
+                    (point, index) => {
+                        elements.push(
+                            `<circle cx="${point.x}" cy="${point.y}" r="5" fill="${background}" stroke="${accent}" stroke-width="3"/>`
+                        );
+
+                        if (showValues.checked) {
+                            elements.push(
+                                `<text x="${point.x}" y="${point.y - 18}" fill="#fafafa" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600" text-anchor="middle">${escapeXml(formatNumber(points[index].value))}</text>`
+                            );
+                        }
+                    }
+                );
+            } else if (
+                type === "bar" ||
+                type === "horizontal-bar"
+            ) {
+                if (
+                    type === "horizontal-bar"
+                ) {
+                    const labelWidth = 150;
+                    const usableWidth =
+                        plot.width -
+                        labelWidth;
+
+                    const barHeight =
+                        Math.max(
+                            8,
+                            Math.min(
+                                42,
+                                plot.height /
+                                    points.length -
+                                    12
+                            )
+                        );
+
+                    points.forEach(
+                        (point, index) => {
+                            const y =
+                                plot.y +
+                                (index +
+                                    0.5) *
+                                    (plot.height /
+                                        points.length) -
+                                barHeight / 2;
+
+                            const width =
+                                (point.value /
+                                    maxValue) *
+                                usableWidth;
+
+                            elements.push(
+                                `<rect x="${plot.x + labelWidth}" y="${y}" width="${Math.max(width, 0)}" height="${barHeight}" rx="6" fill="${accent}"/>`
+                            );
+
+                            if (showLabels.checked) {
+                                elements.push(
+                                    `<text x="${plot.x + labelWidth - 14}" y="${y + barHeight / 2 + 4}" fill="#a1a1aa" font-family="Inter,system-ui,sans-serif" font-size="12" text-anchor="end">${escapeXml(point.label)}</text>`
+                                );
+                            }
+
+                            if (showValues.checked) {
+                                elements.push(
+                                    `<text x="${plot.x + labelWidth + width + 10}" y="${y + barHeight / 2 + 4}" fill="#fafafa" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600">${escapeXml(formatNumber(point.value))}</text>`
+                                );
+                            }
+                        }
+                    );
+                } else {
+                    const gap = Math.min(
+                        18,
+                        plot.width /
+                            Math.max(
+                                points.length,
+                                1
+                            ) /
+                            5
+                    );
+
+                    const slot =
+                        plot.width /
+                        points.length;
+
+                    const barWidth =
+                        Math.max(
+                            8,
+                            slot - gap
+                        );
+
+                    points.forEach(
+                        (point, index) => {
+                            const height =
+                                (point.value /
+                                    maxValue) *
+                                plot.height;
+
+                            const x =
+                                plot.x +
+                                index * slot +
+                                (slot -
+                                    barWidth) /
+                                    2;
+
+                            const y =
+                                plot.y +
+                                plot.height -
+                                height;
+
+                            elements.push(
+                                `<rect x="${x}" y="${y}" width="${barWidth}" height="${Math.max(height, 0)}" rx="6" fill="${accent}"/>`
+                            );
+
+                            if (showValues.checked) {
+                                elements.push(
+                                    `<text x="${x + barWidth / 2}" y="${y - 14}" fill="#fafafa" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600" text-anchor="middle">${escapeXml(formatNumber(point.value))}</text>`
+                                );
+                            }
+                        }
+                    );
+                }
+            } else if (
+                type === "scatter"
+            ) {
+                points.forEach(
+                    (point, index) => {
+                        const x =
+                            points.length === 1
+                                ? plot.x +
+                                  plot.width /
+                                      2
+                                : plot.x +
+                                  (index /
+                                      (points.length -
+                                          1)) *
+                                      plot.width;
+
+                        const y =
+                            plot.y +
+                            plot.height -
+                            (point.value /
+                                maxValue) *
+                                plot.height;
+
+                        elements.push(
+                            `<circle cx="${x}" cy="${y}" r="7" fill="${accent}"/>`
+                        );
+
+                        if (showValues.checked) {
+                            elements.push(
+                                `<text x="${x}" y="${y - 18}" fill="#fafafa" font-family="Inter,system-ui,sans-serif" font-size="12" font-weight="600" text-anchor="middle">${escapeXml(formatNumber(point.value))}</text>`
+                            );
+                        }
+                    }
+                );
+            }
+
+            if (showLabels.checked) {
+                const stride =
+                    Math.max(
+                        1,
+                        Math.ceil(
+                            points.length /
+                                12
+                        )
+                    );
+
+                points.forEach(
+                    (point, index) => {
+                        if (
+                            index %
+                                stride !==
+                                0 &&
+                            index !==
+                                points.length -
+                                    1
+                        ) {
+                            return;
+                        }
+
+                        const x =
+                            points.length === 1
+                                ? plot.x +
+                                  plot.width /
+                                      2
+                                : plot.x +
+                                  (index /
+                                      (points.length -
+                                          1)) *
+                                      plot.width;
+
+                        elements.push(
+                            `<text x="${x}" y="${plot.y + plot.height + 32}" fill="#a1a1aa" font-family="Inter,system-ui,sans-serif" font-size="12" text-anchor="middle">${escapeXml(point.label)}</text>`
+                        );
+                    }
+                );
+            }
+        }
+
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">${elements.join("")}</svg>`;
+    };
+
+    const download = (
+        blob,
+        filename
+    ) => {
+        const url =
+            URL.createObjectURL(blob);
+
+        const anchor =
+            document.createElement("a");
+
+        anchor.href = url;
+        anchor.download = filename;
+
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+
+        window.setTimeout(
+            () =>
+                URL.revokeObjectURL(url),
+            1000
+        );
+    };
+
+    const canvasBlob = (type) =>
+        new Promise((resolve) => {
+            canvas.toBlob(
+                resolve,
+                type,
+                0.95
+            );
+        });
+
+    const exportFile = async (type) => {
+        const baseName =
+            (
+                titleInput.value.trim() ||
+                "kitonoka-graph"
+            )
+                .toLowerCase()
+                .replace(
+                    /[^a-z0-9]+/g,
+                    "-"
+                )
+                .replace(
+                    /^-+|-+$/g,
+                    ""
+                ) ||
+            "kitonoka-graph";
+
+        if (type === "svg") {
+            download(
+                new Blob(
+                    [canvasToSvg()],
+                    {
+                        type:
+                            "image/svg+xml;charset=utf-8",
+                    }
+                ),
+                `${baseName}.svg`
+            );
+        }
+
+        if (
+            type === "png" ||
+            type === "webp" ||
+            type === "jpeg"
+        ) {
+            const mime =
+                type === "png"
+                    ? "image/png"
+                    : type === "webp"
+                      ? "image/webp"
+                      : "image/jpeg";
+
+            const blob =
+                await canvasBlob(mime);
+
+            if (blob) {
+                download(
+                    blob,
+                    `${baseName}.${type}`
+                );
+            }
+        }
+
+        if (type === "json") {
+            const payload = {
+                title:
+                    titleInput.value,
+                type:
+                    chartType.value,
+                accent:
+                    accentInput.value,
+                background:
+                    backgroundInput.value,
+                grid:
+                    showGrid.checked,
+                labels:
+                    showLabels.checked,
+                values:
+                    showValues.checked,
+                data:
+                    parseData(),
+            };
+
+            download(
+                new Blob(
+                    [
+                        JSON.stringify(
+                            payload,
+                            null,
+                            2
+                        ),
+                    ],
+                    {
+                        type:
+                            "application/json;charset=utf-8",
+                    }
+                ),
+                `${baseName}.json`
+            );
+        }
+
+        if (type === "csv") {
+            const rows = [
+                "label,value",
+                ...parseData().map(
+                    (point) =>
+                        `"${point.label.replaceAll('"', '""')}",${point.value}`
+                ),
+            ];
+
+            download(
+                new Blob(
+                    [rows.join("\n")],
+                    {
+                        type:
+                            "text/csv;charset=utf-8",
+                    }
+                ),
+                `${baseName}.csv`
+            );
+        }
+
+        exportMenu.hidden = true;
+        exportButton.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+    };
+
+    const flashButton = (
+        button,
+        message
+    ) => {
+        const original =
+            button.textContent;
+
+        button.textContent = message;
+
+        window.setTimeout(
+            () => {
+                button.textContent =
+                    original;
+            },
+            1400
+        );
+    };
+
+    const updateZoom = () => {
+        zoomLabel.textContent =
+            `${Math.round(zoom * 100)}%`;
+
+        canvas.style.width =
+            `${WIDTH * zoom}px`;
+
+        canvas.style.height =
+            `${HEIGHT * zoom}px`;
+    };
+
+    const fitCanvas = () => {
+        const wrap =
+            document.querySelector(
+                "#canvas-wrap"
+            );
+
+        if (!(wrap instanceof HTMLElement)) {
+            return;
+        }
+
+        const availableWidth =
+            wrap.clientWidth - 64;
+
+        const availableHeight =
+            wrap.clientHeight - 64;
+
+        zoom = Math.min(
+            availableWidth / WIDTH,
+            availableHeight / HEIGHT,
+            1
+        );
+
+        updateZoom();
+    };
+
+    const inputs = [
+        dataInput,
+        titleInput,
+        chartType,
+        accentInput,
+        backgroundInput,
+        showGrid,
+        showLabels,
+        showValues,
+    ];
+
+    inputs.forEach((input) => {
+        input.addEventListener(
+            "input",
+            draw
+        );
+
+        input.addEventListener(
+            "change",
+            draw
+        );
+    });
+
+    resetButton.addEventListener(
+        "click",
+        () => {
+            dataInput.value =
+                defaultData;
+
+            titleInput.value =
+                defaultTitle;
+
+            chartType.value = "line";
+            accentInput.value =
+                "#8b5cf6";
+
+            backgroundInput.value =
+                "#09090b";
+
+            showGrid.checked = true;
+            showLabels.checked = true;
+            showValues.checked = false;
+
+            draw();
+        }
+    );
+
+    copySvgButton.addEventListener(
+        "click",
+        async () => {
+            try {
+                await navigator.clipboard.writeText(
+                    canvasToSvg()
+                );
+
+                flashButton(
+                    copySvgButton,
+                    "Copied"
+                );
+            } catch {
+                flashButton(
+                    copySvgButton,
+                    "Failed"
+                );
+            }
+        }
+    );
+
+    exportButton.addEventListener(
+        "click",
+        () => {
+            exportMenu.hidden =
+                !exportMenu.hidden;
+
+            exportButton.setAttribute(
+                "aria-expanded",
+                String(
+                    !exportMenu.hidden
+                )
+            );
+        }
+    );
+
+    exportMenu
+        .querySelectorAll(
+            "[data-export]"
+        )
+        .forEach((button) => {
+            button.addEventListener(
+                "click",
+                () => {
+                    const type =
+                        button.getAttribute(
+                            "data-export"
+                        );
+
+                    if (type) {
+                        exportFile(type);
+                    }
+                }
+            );
+        });
+
+    document.addEventListener(
+        "click",
+        (event) => {
+            if (
+                !(event.target instanceof Node)
+            ) {
+                return;
+            }
+
+            if (
+                !exportButton.contains(
+                    event.target
+                ) &&
+                !exportMenu.contains(
+                    event.target
+                )
+            ) {
+                exportMenu.hidden = true;
+
+                exportButton.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+            }
+        }
+    );
+
+    document
+        .querySelector("#zoom-in")
+        ?.addEventListener(
+            "click",
+            () => {
+                zoom = Math.min(
+                    zoom + 0.1,
+                    2
+                );
+
+                updateZoom();
+            }
+        );
+
+    document
+        .querySelector("#zoom-out")
+        ?.addEventListener(
+            "click",
+            () => {
+                zoom = Math.max(
+                    zoom - 0.1,
+                    0.3
+                );
+
+                updateZoom();
+            }
+        );
+
+    document
+        .querySelector("#fit")
+        ?.addEventListener(
+            "click",
+            fitCanvas
+        );
+
+    window.addEventListener(
+        "resize",
+        fitCanvas
+    );
+
+    draw();
+    fitCanvas();
+</script>
+
+<style>
+    .graph {
+        width: min(1500px, calc(100% - 2rem));
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 4rem 0;
+    }
+
+    .header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .heading {
+        min-width: 0;
+    }
+
+    .back {
+        display: inline-block;
+        margin-bottom: 2.5rem;
+        color: var(--foreground-muted);
+        font-size: 0.85rem;
+        transition: color 160ms ease;
+    }
+
+    .back:hover {
+        color: var(--foreground);
+    }
+
+    .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--accent);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+    }
+
+    .description {
+        max-width: 520px;
+        margin: 1rem 0 0;
+        color: var(--foreground-muted);
+        line-height: 1.6;
+    }
+
+    .actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .actions button {
+        padding: 0.65rem 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: 0.55rem;
+        background: var(--background-secondary);
+        color: var(--foreground);
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition:
+            border-color 160ms ease,
+            transform 160ms ease,
+            background 160ms ease;
+    }
+
+    .actions button:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+    }
+
+    .actions .primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: white;
+    }
+
+    .export {
+        position: relative;
+    }
+
+    .export-trigger {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .export-trigger span {
+        opacity: 0.7;
+        font-size: 0.9rem;
+    }
+
+    .export-menu {
+        position: absolute;
+        z-index: 20;
+        top: calc(100% + 0.5rem);
+        right: 0;
+        width: 190px;
+        padding: 0.35rem;
+        border: 1px solid var(--border);
+        border-radius: 0.7rem;
+        background: var(--background-secondary);
+        box-shadow:
+            0 18px 50px
+                rgb(0 0 0 / 35%);
+    }
+
+    .export-menu[hidden] {
+        display: none;
+    }
+
+    .export-menu button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        transform: none;
+        text-align: left;
+    }
+
+    .export-menu button:hover {
+        background: var(--background);
+    }
+
+    .export-menu span {
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+    }
+
+    .workspace {
+        display: grid;
+        grid-template-columns: 270px minmax(0, 1fr);
+        min-height: 700px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 0.8rem;
+        background: var(--background-secondary);
+    }
+
+    .sidebar {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        border-right: 1px solid var(--border);
+    }
+
+    .section {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.85rem;
+        color: var(--foreground);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .section-title span:last-child {
+        color: var(--foreground-muted);
+        font-size: 0.65rem;
+        font-weight: 500;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-bottom: 0.8rem;
+        color: var(--foreground-muted);
+        font-size: 0.72rem;
+        font-weight: 600;
+    }
+
+    input[type="text"],
+    select,
+    textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        outline: 0;
+        background: var(--background);
+        color: var(--foreground);
+        transition:
+            border-color 160ms ease,
+            box-shadow 160ms ease;
+    }
+
+    input[type="text"],
+    select {
+        min-height: 36px;
+        padding: 0 0.7rem;
+        font-size: 0.8rem;
+    }
+
+    input[type="text"]:focus,
+    select:focus,
+    textarea:focus {
+        border-color: var(--accent);
+        box-shadow:
+            0 0 0 2px
+                color-mix(
+                    in srgb,
+                    var(--accent) 15%,
+                    transparent
+                );
+    }
+
+    .color-field {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        min-height: 36px;
+    }
+
+    .color-field input {
+        width: 34px;
+        height: 28px;
+        padding: 2px;
+        border: 1px solid var(--border);
+        border-radius: 0.4rem;
+        background: var(--background);
+        cursor: pointer;
+    }
+
+    .toggle {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 0.7rem;
+        cursor: pointer;
+    }
+
+    .toggle input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .toggle-ui {
+        position: relative;
+        width: 30px;
+        height: 17px;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: var(--border);
+        transition: background 160ms ease;
+    }
+
+    .toggle-ui::after {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--foreground-muted);
+        content: "";
+        transition: transform 160ms ease;
+    }
+
+    .toggle input:checked + .toggle-ui {
+        background: var(--accent);
+    }
+
+    .toggle input:checked + .toggle-ui::after {
+        background: white;
+        transform: translateX(13px);
+    }
+
+    .data-section {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 260px;
+    }
+
+    #data {
+        min-height: 190px;
+        flex: 1;
+        resize: none;
+        padding: 0.75rem;
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.75rem;
+        line-height: 1.7;
+    }
+
+    .hint {
+        margin: 0.6rem 0 0;
+        color: var(--foreground-muted);
+        font-size: 0.65rem;
+        line-height: 1.5;
+    }
+
+    .hint code {
+        padding: 0.1rem 0.3rem;
+        border-radius: 0.25rem;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: inherit;
+    }
+
+    .sidebar-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: auto;
+        padding: 0.8rem 1rem;
+        color: var(--foreground-muted);
+        font-size: 0.65rem;
+    }
+
+    #status {
+        color: var(--accent);
+    }
+
+    .canvas-panel {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .canvas-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        padding: 0 0.9rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .canvas-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .canvas-actions button {
+        min-width: 28px;
+        min-height: 26px;
+        padding: 0 0.45rem;
+        border: 1px solid var(--border);
+        border-radius: 0.4rem;
+        background: var(--background);
+        color: var(--foreground-muted);
+        cursor: pointer;
+        font-size: 0.7rem;
+        transition:
+            color 160ms ease,
+            border-color 160ms ease;
+    }
+
+    .canvas-actions button:hover {
+        border-color: var(--accent);
+        color: var(--foreground);
+    }
+
+    #zoom {
+        min-width: 42px;
+        text-align: center;
+        letter-spacing: normal;
+    }
+
+    .canvas-wrap {
+        position: relative;
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
+        padding: 2rem;
+        background:
+            linear-gradient(
+                45deg,
+                var(--background) 25%,
+                transparent 25%
+            ) 0 0 / 24px 24px,
+            linear-gradient(
+                -45deg,
+                var(--background) 25%,
+                transparent 25%
+            ) 0 12px / 24px 24px,
+            linear-gradient(
+                45deg,
+                transparent 75%,
+                var(--background) 75%
+            ) 12px -12px / 24px 24px,
+            linear-gradient(
+                -45deg,
+                transparent 75%,
+                var(--background) 75%
+            ) -12px 0 / 24px 24px,
+            var(--background-secondary);
+    }
+
+    canvas {
+        display: block;
+        width: 900px;
+        height: 472.5px;
+        flex: 0 0 auto;
+        border: 1px solid var(--border);
+        border-radius: 0.7rem;
+        box-shadow:
+            0 24px 80px
+                rgb(0 0 0 / 30%);
+    }
+
+    .canvas-error {
+        position: absolute;
+        right: 1rem;
+        bottom: 1rem;
+        left: 1rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #7f1d1d;
+        border-radius: 0.5rem;
+        background: var(--background-secondary);
+        color: #fca5a5;
+        font-size: 0.75rem;
+    }
+
+    @media (max-width: 1050px) {
+        .workspace {
+            grid-template-columns: 240px minmax(0, 1fr);
+        }
+    }
+
+    @media (max-width: 800px) {
+        .header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .actions {
+            justify-content: flex-start;
+        }
+
+        .workspace {
+            grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+            border-right: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-section {
+            min-height: 220px;
+        }
+
+        .canvas-panel {
+            min-height: 600px;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .graph {
+            width: min(100% - 1.5rem, 1500px);
+            padding: 2.5rem 0;
+        }
+
+        .back {
+            margin-bottom: 2rem;
+        }
+
+        .actions {
+            width: 100%;
+        }
+
+        .actions > button,
+        .export {
+            flex: 1;
+        }
+
+        .actions .export-trigger {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .export-menu {
+            right: 0;
+            left: 0;
+            width: auto;
+        }
+
+        .canvas-wrap {
+            min-height: 500px;
+            padding: 1rem;
+        }
+    }
+</style>
+```
