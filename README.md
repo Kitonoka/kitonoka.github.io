@@ -56,6 +56,12 @@ Bi-directional data format converter for JSON, YAML, TOML, XML, CSV, Markdown, w
 
 [View project →](https://kitonoka.github.io/projects/format-convert/)
 
+### Shader Lab
+
+Write GLSL vertex and fragment shaders and see the result instantly.
+
+[View project →](https://kitonoka.github.io/projects/shader-lab/)
+
 ### Canvas
 
 Create, edit and export freeform node canvases from JSON or Obsidian Canvas files.
