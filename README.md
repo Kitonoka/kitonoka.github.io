@@ -50,6 +50,12 @@ Client-side regular expression testing and debugging tool with match highlightin
 
 [View project →](https://kitonoka.github.io/projects/regex/)
 
+### Format Convert
+
+Bi-directional data format converter for JSON, YAML, TOML, XML, CSV, Markdown, with some coding languages supported as output.
+
+[View project →](https://kitonoka.github.io/projects/format-convert/)
+
 ### Canvas
 
 Create, edit and export freeform node canvases from JSON or Obsidian Canvas files.

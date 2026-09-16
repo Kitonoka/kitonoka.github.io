@@ -1,0 +1,1403 @@
+---
+const defaultJson = `{
+  "name": "Kitonoka",
+  "description": "Developer, cybersecurity and game development",
+  "technologies": [
+    "Rust",
+    "TypeScript",
+    "Python",
+    "C++"
+  ],
+  "active": true,
+  "projects": {
+    "website": "Astro",
+    "game": "Unity",
+    "llm": "Rust"
+  }
+}`;
+
+const formats = [
+    { value: "json", label: "JSON", extension: "json" },
+    { value: "yaml", label: "YAML", extension: "yaml" },
+    { value: "toml", label: "TOML", extension: "toml" },
+    { value: "xml", label: "XML", extension: "xml" },
+    { value: "csv", label: "CSV", extension: "csv" },
+    { value: "markdown", label: "Markdown", extension: "md" },
+    { value: "typescript", label: "TypeScript", extension: "ts" },
+    { value: "rust", label: "Rust", extension: "rs" },
+    { value: "go", label: "Go", extension: "go" },
+    { value: "csharp", label: "C#", extension: "cs" },
+    { value: "python", label: "Python", extension: "py" },
+];
+---
+
+<main class="format-convert">
+    <header class="header">
+        <div class="heading">
+            <a class="back" href="/">← Kitonoka</a>
+
+            <p class="eyebrow">Project</p>
+
+            <h1>Format Convert</h1>
+
+            <p class="description">
+                Convert between JSON, YAML, TOML, XML, CSV, Markdown and code formats instantly.
+            </p>
+        </div>
+
+        <div class="actions">
+            <button id="reset" type="button">
+                Reset
+            </button>
+
+            <button id="format" type="button">
+                Format
+            </button>
+
+            <button id="copy" type="button">
+                Copy
+            </button>
+
+            <button
+                id="download"
+                class="primary"
+                type="button"
+            >
+                Download
+            </button>
+        </div>
+    </header>
+
+    <section class="toolbar">
+        <div class="format-group">
+            <span class="format-label">From</span>
+
+            <select id="input-format-select" aria-label="Input format">
+                {formats.map((format) => (
+                    <option value={format.value}>
+                        {format.label}
+                    </option>
+                ))}
+            </select>
+            
+            <span class="format-label">To</span>
+
+            <select id="format-select" aria-label="Output format">
+                {formats.map((format) => (
+                    <option value={format.value}>
+                        {format.label}
+                    </option>
+                ))}
+            </select>
+        </div>
+
+        <div id="output-status" class="output-status">
+            Ready
+        </div>
+    </section>
+
+    <section class="workspace" aria-label="Data converter">
+        <div class="panel editor-panel">
+            <div class="panel-header">
+                <span id="input-label">JSON</span>
+
+                <span id="input-status" class="status">
+                    Valid
+                </span>
+            </div>
+
+            <textarea
+                id="editor"
+                spellcheck="false"
+                autocapitalize="off"
+                autocomplete="off"
+                autocorrect="off"
+                aria-label="Input data"
+            >{defaultJson}</textarea>
+
+            <div
+                id="input-error"
+                class="error"
+                hidden
+            ></div>
+        </div>
+
+        <div class="panel output-panel">
+            <div class="panel-header">
+                <span id="output-label">YAML</span>
+
+                <div class="panel-header-right">
+                    <button id="convert-back" type="button" class="convert-back-btn" hidden>
+                        ⇄ Use as Input
+                    </button>
+                    <span id="output-size" class="dimensions">
+                        Ready
+                    </span>
+                </div>
+            </div>
+
+            <textarea
+                id="output"
+                spellcheck="false"
+                readonly
+                aria-label="Converted output"
+            ></textarea>
+
+            <div
+                id="conversion-error"
+                class="error"
+                hidden
+            ></div>
+        </div>
+    </section>
+</main>
+
+<script define:vars={{ defaultJson }}>
+    const editor = document.querySelector("#editor");
+    const output = document.querySelector("#output");
+
+    const inputStatus = document.querySelector("#input-status");
+    const outputStatus = document.querySelector("#output-status");
+    const inputLabel = document.querySelector("#input-label");
+    const outputLabel = document.querySelector("#output-label");
+    const outputSize = document.querySelector("#output-size");
+
+    const inputError = document.querySelector("#input-error");
+    const conversionError = document.querySelector("#conversion-error");
+
+    const inputFormatSelect = document.querySelector("#input-format-select");
+    const formatSelect = document.querySelector("#format-select");
+
+    const resetButton = document.querySelector("#reset");
+    const formatButton = document.querySelector("#format");
+    const copyButton = document.querySelector("#copy");
+    const downloadButton = document.querySelector("#download");
+    const convertBackButton = document.querySelector("#convert-back");
+
+    if (
+        !(editor instanceof HTMLTextAreaElement) ||
+        !(output instanceof HTMLTextAreaElement) ||
+        !(inputStatus instanceof HTMLElement) ||
+        !(outputStatus instanceof HTMLElement) ||
+        !(inputLabel instanceof HTMLElement) ||
+        !(outputLabel instanceof HTMLElement) ||
+        !(outputSize instanceof HTMLElement) ||
+        !(inputError instanceof HTMLElement) ||
+        !(conversionError instanceof HTMLElement) ||
+        !(inputFormatSelect instanceof HTMLSelectElement) ||
+        !(formatSelect instanceof HTMLSelectElement) ||
+        !(resetButton instanceof HTMLButtonElement) ||
+        !(formatButton instanceof HTMLButtonElement) ||
+        !(copyButton instanceof HTMLButtonElement) ||
+        !(downloadButton instanceof HTMLButtonElement) ||
+        !(convertBackButton instanceof HTMLButtonElement)
+    ) {
+        throw new Error("Converter failed to initialize.");
+    }
+
+    const formatNames = {
+        json: "JSON",
+        yaml: "YAML",
+        toml: "TOML",
+        xml: "XML",
+        csv: "CSV",
+        markdown: "Markdown",
+        typescript: "TypeScript",
+        rust: "Rust",
+        go: "Go",
+        csharp: "C#",
+        python: "Python",
+    };
+
+    const extensions = {
+        json: "json",
+        yaml: "yaml",
+        toml: "toml",
+        xml: "xml",
+        csv: "csv",
+        markdown: "md",
+        typescript: "ts",
+        rust: "rs",
+        go: "go",
+        csharp: "cs",
+        python: "py",
+    };
+
+    const supportedInputs = ["json", "yaml", "toml", "xml", "csv", "markdown"];
+
+    const parseYamlValue = (val) => {
+        if (val === "true") return true;
+        if (val === "false") return false;
+        if (val === "null" || val === "~" || val === "") return null;
+        if (/^-?\d+$/.test(val)) return parseInt(val, 10);
+        if (/^-?\d+\.\d+$/.test(val)) return parseFloat(val);
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+            return val.slice(1, -1).replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\\\/g, "\\");
+        }
+        return val;
+    };
+
+    const parseYaml = (str) => {
+        try { return JSON.parse(str); } catch {}
+        const lines = str.split("\n").filter(l => l.trim() && !l.trim().startsWith("#"));
+        let root = {};
+        const stack = [{ indent: -1, target: root, key: null, isArray: false }];
+        
+        for (let line of lines) {
+            const indent = line.search(/\S/);
+            const content = line.trim();
+            
+            while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
+                stack.pop();
+            }
+            
+            const parent = stack[stack.length - 1];
+            
+            if (content.startsWith("- ")) {
+                const itemContent = content.slice(2).trim();
+                
+                if (!parent.isArray) {
+                    const arr = [];
+                    if (stack.length === 1) {
+                        root = arr;
+                        parent.target = arr;
+                    } else {
+                        const grandparent = stack[stack.length - 2];
+                        if (grandparent.isArray) {
+                            grandparent.target.push(arr);
+                        } else {
+                            grandparent.target[parent.key] = arr;
+                        }
+                        parent.target = arr;
+                    }
+                    parent.isArray = true;
+                }
+                
+                if (itemContent.includes(":") && !itemContent.startsWith('"') && !itemContent.startsWith("'")) {
+                    const colonIndex = itemContent.indexOf(":");
+                    const key = itemContent.slice(0, colonIndex).trim().replace(/^["'](.*)["']$/, '$1');
+                    const value = itemContent.slice(colonIndex + 1).trim();
+                    const obj = {};
+                    parent.target.push(obj);
+                    if (value !== "") {
+                        obj[key] = parseYamlValue(value);
+                    }
+                    stack.push({ indent, target: obj, key, isArray: false });
+                } else {
+                    parent.target.push(parseYamlValue(itemContent));
+                }
+            } else {
+                const colonIndex = content.indexOf(":");
+                if (colonIndex !== -1) {
+                    const key = content.slice(0, colonIndex).trim().replace(/^["'](.*)["']$/, '$1');
+                    const value = content.slice(colonIndex + 1).trim();
+                    
+                    if (value === "") {
+                        const newObj = {};
+                        if (parent.isArray) {
+                            parent.target.push(newObj);
+                        } else {
+                            parent.target[key] = newObj;
+                        }
+                        stack.push({ indent, target: newObj, key, isArray: false });
+                    } else {
+                        if (parent.isArray) {
+                            parent.target.push(parseYamlValue(value));
+                        } else {
+                            parent.target[key] = parseYamlValue(value);
+                        }
+                    }
+                }
+            }
+        }
+        return root;
+    };
+
+    const parseTomlValue = (val) => {
+        if (val === "true") return true;
+        if (val === "false") return false;
+        if (/^-?\d+$/.test(val)) return parseInt(val, 10);
+        if (/^-?\d+\.\d+$/.test(val)) return parseFloat(val);
+        if (val.startsWith('"') && val.endsWith('"')) {
+            return val.slice(1, -1).replace(/\\"/g, '"').replace(/\\n/g, "\n").replace(/\\\\/g, "\\");
+        }
+        if (val.startsWith("'") && val.endsWith("'")) {
+            return val.slice(1, -1);
+        }
+        if (val.startsWith("[") && val.endsWith("]")) {
+            const inner = val.slice(1, -1).trim();
+            if (!inner) return [];
+            const items = [];
+            let inString = false;
+            let currentItem = "";
+            for (let i = 0; i < inner.length; i++) {
+                const char = inner[i];
+                if (char === '"') {
+                    inString = !inString;
+                    currentItem += char;
+                } else if (char === "," && !inString) {
+                    items.push(currentItem.trim());
+                    currentItem = "";
+                } else {
+                    currentItem += char;
+                }
+            }
+            if (currentItem.trim()) items.push(currentItem.trim());
+            return items.map(parseTomlValue);
+        }
+        return val;
+    };
+
+    const parseToml = (str) => {
+        let combined = "";
+        let inArray = false;
+        let arrayDepth = 0;
+        
+        for (let line of str.split("\n")) {
+            const trimmed = line.trim();
+            if (!inArray) {
+                combined += line + "\n";
+                if (trimmed.includes("=") && trimmed.includes("[")) {
+                    inArray = true;
+                    arrayDepth = (trimmed.match(/\[/g) || []).length - (trimmed.match(/\]/g) || []).length;
+                    if (arrayDepth <= 0) {
+                        inArray = false;
+                    }
+                }
+            } else {
+                combined = combined.trimEnd() + " " + trimmed;
+                arrayDepth += (trimmed.match(/\[/g) || []).length - (trimmed.match(/\]/g) || []).length;
+                if (arrayDepth <= 0) {
+                    inArray = false;
+                    combined += "\n";
+                }
+            }
+        }
+        
+        const lines = combined.split("\n");
+        const root = {};
+        let current = root;
+        
+        for (let line of lines) {
+            line = line.trim();
+            if (!line || line.startsWith("#")) continue;
+            
+            if (line.startsWith("[") && line.endsWith("]")) {
+                const key = line.slice(1, -1).trim();
+                const parts = key.split(".");
+                let obj = root;
+                for (let part of parts) {
+                    if (!obj[part]) {
+                        obj[part] = {};
+                    }
+                    obj = obj[part];
+                }
+                current = obj;
+            } else {
+                const eqIndex = line.indexOf("=");
+                if (eqIndex !== -1) {
+                    const key = line.slice(0, eqIndex).trim().replace(/^["'](.*)["']$/, '$1');
+                    const value = line.slice(eqIndex + 1).trim();
+                    current[key] = parseTomlValue(value);
+                }
+            }
+        }
+        return root;
+    };
+
+    const parseXml = (str) => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(str, "text/xml");
+        
+        const parseNode = (node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const obj = {};
+                const children = Array.from(node.children);
+                if (children.length === 0) {
+                    return node.textContent || "";
+                }
+                
+                const isArrayOfItems = children.every(c => c.tagName === "item") && children.length > 0;
+                
+                if (isArrayOfItems) {
+                    return children.map(parseNode);
+                } else {
+                    for (let child of children) {
+                        const childValue = parseNode(child);
+                        if (obj[child.tagName]) {
+                            if (!Array.isArray(obj[child.tagName])) {
+                                obj[child.tagName] = [obj[child.tagName]];
+                            }
+                            obj[child.tagName].push(childValue);
+                        } else {
+                            obj[child.tagName] = childValue;
+                        }
+                    }
+                    return obj;
+                }
+            }
+            return null;
+        };
+        
+        const root = doc.documentElement;
+        if (!root) return {};
+        
+        return parseNode(root);
+    };
+
+    const parseTableValue = (val) => {
+        if (val === "true") return true;
+        if (val === "false") return false;
+        if (/^-?\d+$/.test(val)) return parseInt(val, 10);
+        if (/^-?\d+\.\d+$/.test(val)) return parseFloat(val);
+        if ((val.startsWith("[") && val.endsWith("]")) || (val.startsWith("{") && val.endsWith("}"))) {
+            try { return JSON.parse(val); } catch {}
+        }
+        return val;
+    };
+
+    const parseCsv = (str) => {
+        const lines = str.split("\n").filter(l => l.trim());
+        if (lines.length === 0) return {};
+        
+        const parseLine = (line) => {
+            const items = [];
+            let inQuote = false;
+            let currentItem = "";
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    if (inQuote && line[i+1] === '"') {
+                        currentItem += '"';
+                        i++;
+                    } else {
+                        inQuote = !inQuote;
+                    }
+                } else if (char === "," && !inQuote) {
+                    items.push(currentItem);
+                    currentItem = "";
+                } else {
+                    currentItem += char;
+                }
+            }
+            items.push(currentItem);
+            return items;
+        };
+        
+        const headers = parseLine(lines[0]);
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+            const values = parseLine(lines[i]);
+            const row = {};
+            for (let j = 0; j < headers.length; j++) {
+                const val = values[j] !== undefined ? values[j] : "";
+                row[headers[j]] = parseTableValue(val);
+            }
+            rows.push(row);
+        }
+        return rows.length === 1 ? rows[0] : rows;
+    };
+
+    const parseMarkdown = (str) => {
+        const lines = str.split("\n").filter(l => l.trim());
+        if (lines.length < 2) return {};
+        
+        const parseLine = (line) => {
+            return line.split("|")
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
+        };
+        
+        const headers = parseLine(lines[0]);
+        const rows = [];
+        for (let i = 2; i < lines.length; i++) {
+            const values = parseLine(lines[i]);
+            const row = {};
+            for (let j = 0; j < headers.length; j++) {
+                const val = values[j] !== undefined ? values[j] : "";
+                row[headers[j]] = parseTableValue(val);
+            }
+            rows.push(row);
+        }
+        return rows.length === 1 ? rows[0] : rows;
+    };
+
+    const escapeYaml = (value) => {
+        return String(value)
+            .replace(/\\/g, "\\\\")
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, "\\n");
+    };
+
+    const yamlScalar = (value) => {
+        if (value === null) return "null";
+        if (typeof value === "boolean") return value ? "true" : "false";
+        if (typeof value === "number") return Number.isFinite(value) ? String(value) : "null";
+
+        const string = String(value);
+        if (
+            string === "" ||
+            /^(true|false|null|~|yes|no)$/i.test(string) ||
+            /^[\d.-]+$/.test(string) ||
+            /[:#[\],&*!|>'"%@`{}]/.test(string) ||
+            /^\s|\s$/.test(string)
+        ) {
+            return `"${escapeYaml(string)}"`;
+        }
+        return string;
+    };
+
+    const toYaml = (value, depth = 0) => {
+        const indent = "  ".repeat(depth);
+
+        if (value === null || typeof value !== "object") {
+            return yamlScalar(value);
+        }
+
+        if (Array.isArray(value)) {
+            if (value.length === 0) return "[]";
+            return value.map((item) => {
+                if (item !== null && typeof item === "object") {
+                    const nested = toYaml(item, depth + 1);
+                    const lines = nested.split("\n");
+                    return `${indent}- ${lines.shift()}\n${lines.map((line) => `${indent}  ${line}`).join("\n")}`;
+                }
+                return `${indent}- ${yamlScalar(item)}`;
+            }).join("\n");
+        }
+
+        const entries = Object.entries(value);
+        if (entries.length === 0) return "{}";
+
+        return entries.map(([key, item]) => {
+            const safeKey = /^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) ? key : `"${escapeYaml(key)}"`;
+            if (item !== null && typeof item === "object") {
+                const nested = toYaml(item, depth + 1);
+                return `${indent}${safeKey}:\n${nested}`;
+            }
+            return `${indent}${safeKey}: ${yamlScalar(item)}`;
+        }).join("\n");
+    };
+
+    const tomlKey = (key) => /^[A-Za-z0-9_-]+$/.test(key) ? key : `"${String(key).replace(/"/g, '\\"')}"`;
+
+    const tomlString = (value) => `"${String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
+
+    const tomlValue = (value) => {
+        if (value === null) return '""';
+        if (typeof value === "string") return tomlString(value);
+        if (typeof value === "boolean") return value ? "true" : "false";
+        if (typeof value === "number") return Number.isFinite(value) ? String(value) : '""';
+        if (Array.isArray(value)) return `[${value.map(tomlValue).join(", ")}]`;
+        return tomlString(JSON.stringify(value));
+    };
+
+    const toToml = (object) => {
+        if (!object || typeof object !== "object" || Array.isArray(object)) {
+            throw new Error("TOML requires an object at the root.");
+        }
+        
+        const lines = [];
+        const primitiveEntries = Object.entries(object).filter(([, val]) => val === null || typeof val !== "object");
+        primitiveEntries.forEach(([key, val]) => {
+            lines.push(`${tomlKey(key)} = ${tomlValue(val)}`);
+        });
+
+        const nestedEntries = Object.entries(object).filter(([, val]) => val !== null && typeof val === "object" && !Array.isArray(val));
+        nestedEntries.forEach(([key, val]) => {
+            if (lines.length > 0) lines.push("");
+            lines.push(`[${tomlKey(key)}]`);
+            const nested = toToml(val);
+            if (nested) lines.push(nested);
+        });
+
+        return lines.join("\n");
+    };
+
+    const escapeXml = (value) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+
+    const toXml = (value, name = "root", depth = 0) => {
+        const indent = "  ".repeat(depth);
+        if (value === null || typeof value !== "object") {
+            return `${indent}<${name}>${escapeXml(value ?? "")}</${name}>`;
+        }
+        if (Array.isArray(value)) {
+            return value.map((item) => toXml(item, "item", depth)).join("\n");
+        }
+        const children = Object.entries(value)
+            .map(([key, item]) => toXml(item, key.replace(/[^A-Za-z0-9_.-]/g, "_"), depth + 1))
+            .join("\n");
+        return `${indent}<${name}>\n${children}\n${indent}</${name}>`;
+    };
+
+    const csvEscape = (value) => {
+        const string = value === null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
+        if (string.includes(",") || string.includes('"') || string.includes("\n")) {
+            return `"${string.replace(/"/g, '""')}"`;
+        }
+        return string;
+    };
+
+    const toCsv = (value) => {
+        const rows = Array.isArray(value) ? value : [value];
+        if (!rows.every((row) => row && typeof row === "object" && !Array.isArray(row))) {
+            throw new Error("CSV conversion requires an object or an array of objects.");
+        }
+        if (rows.length === 0) return "";
+
+        const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+        const header = keys.map(csvEscape).join(",");
+        const lines = rows.map((row) => keys.map((key) => csvEscape(row[key])).join(","));
+
+        return [header, ...lines].join("\n");
+    };
+
+    const markdownValue = (value) => {
+        if (value !== null && typeof value === "object") return JSON.stringify(value);
+        return String(value ?? "");
+    };
+
+    const toMarkdown = (value) => {
+        const rows = Array.isArray(value) ? value : [value];
+        if (!rows.every((row) => row && typeof row === "object" && !Array.isArray(row))) {
+            throw new Error("Markdown table conversion requires an object or an array of objects.");
+        }
+        if (rows.length === 0) return "";
+
+        const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+        const header = `| ${keys.join(" | ")} |`;
+        const separator = `| ${keys.map(() => "---").join(" | ")} |`;
+        const data = rows.map((row) => `| ${keys.map((key) => markdownValue(row[key]).replace(/\|/g, "\\|")).join(" | ")} |`);
+
+        return [header, separator, ...data].join("\n");
+    };
+
+    const pascalCase = (value) => {
+        const result = String(value).replace(/[^A-Za-z0-9]+/g, " ").trim().split(/\s+/)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("");
+        return result || "Root";
+    };
+
+    const camelCase = (value) => {
+        const pascal = pascalCase(value);
+        return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+    };
+
+    const rustType = (value, name = "Root") => {
+        if (value === null) return "Option<String>";
+        if (Array.isArray(value)) return value.length === 0 ? "Vec<serde_json::Value>" : `Vec<${rustType(value[0], `${name}Item`)}>`;
+        if (typeof value === "string") return "String";
+        if (typeof value === "boolean") return "bool";
+        if (typeof value === "number") return Number.isInteger(value) ? "i64" : "f64";
+        if (typeof value === "object") return pascalCase(name);
+        return "serde_json::Value";
+    };
+
+    const generateRustStructs = (object, name = "Root", structs = []) => {
+        if (!object || typeof object !== "object" || Array.isArray(object)) return structs;
+
+        Object.entries(object).forEach(([key, val]) => {
+            if (val && typeof val === "object") {
+                if (Array.isArray(val)) {
+                    val.forEach((item) => {
+                        if (item && typeof item === "object" && !Array.isArray(item)) {
+                            generateRustStructs(item, pascalCase(`${key}Item`), structs);
+                        }
+                    });
+                } else {
+                    generateRustStructs(val, pascalCase(key), structs);
+                }
+            }
+        });
+
+        const fields = Object.entries(object).map(([key, val]) => `    pub ${key.replace(/[^A-Za-z0-9_]/g, "_")}: ${rustType(val, key)},`).join("\n");
+        structs.push(`#[derive(Debug, Serialize, Deserialize)]\npub struct ${pascalCase(name)} {\n${fields}\n}`);
+        return structs;
+    };
+
+    const toRust = (value) => {
+        if (Array.isArray(value)) {
+            if (value.length === 0 || typeof value[0] !== "object" || value[0] === null) {
+                return `use serde::{Deserialize, Serialize};\nuse serde_json::Value;\n\npub type Root = Vec<Value>;`;
+            }
+            const structs = generateRustStructs(value[0], "RootItem");
+            return `use serde::{Deserialize, Serialize};\n\n${structs.join("\n\n")}\n\npub type Root = Vec<RootItem>;`;
+        }
+        if (!value || typeof value !== "object") {
+            throw new Error("Rust conversion requires an object or array.");
+        }
+        return `use serde::{Deserialize, Serialize};\n\n${generateRustStructs(value).join("\n\n")}`;
+    };
+
+    const goType = (value, name = "Root") => {
+        if (value === null) return "any";
+        if (Array.isArray(value)) return value.length === 0 ? "[]any" : `[]${goType(value[0], `${name}Item`)}`;
+        if (typeof value === "string") return "string";
+        if (typeof value === "boolean") return "bool";
+        if (typeof value === "number") return Number.isInteger(value) ? "int64" : "float64";
+        if (typeof value === "object") return pascalCase(name);
+        return "any";
+    };
+
+    const generateGoStructs = (object, name = "Root", structs = []) => {
+        if (!object || typeof object !== "object" || Array.isArray(object)) return structs;
+
+        Object.entries(object).forEach(([key, val]) => {
+            if (val && typeof val === "object") {
+                if (Array.isArray(val)) {
+                    val.forEach((item) => {
+                        if (item && typeof item === "object" && !Array.isArray(item)) {
+                            generateGoStructs(item, pascalCase(`${key}Item`), structs);
+                        }
+                    });
+                } else {
+                    generateGoStructs(val, pascalCase(key), structs);
+                }
+            }
+        });
+
+        const fields = Object.entries(object).map(([key, val]) => `\t${pascalCase(key)} ${goType(val, key)} \`json:"${key}"\``).join("\n");
+        structs.push(`type ${pascalCase(name)} struct {\n${fields}\n}`);
+        return structs;
+    };
+
+    const toGo = (value) => {
+        if (Array.isArray(value)) {
+            if (value.length === 0 || typeof value[0] !== "object" || value[0] === null) {
+                return `package main\n\nimport "encoding/json"\n\ntype Root []any`;
+            }
+            const structs = generateGoStructs(value[0], "RootItem");
+            return `package main\n\n${structs.join("\n\n")}\n\ntype Root []RootItem`;
+        }
+        if (!value || typeof value !== "object") {
+            throw new Error("Go conversion requires an object or array.");
+        }
+        return `package main\n\n${generateGoStructs(value).join("\n\n")}`;
+    };
+
+    const csharpType = (value, name) => {
+        if (value === null) return "object?";
+        if (Array.isArray(value)) return value.length === 0 ? "List<object>" : `List<${csharpType(value[0], `${name}Item`)}>`;
+        if (typeof value === "string") return "string";
+        if (typeof value === "boolean") return "bool";
+        if (typeof value === "number") return Number.isInteger(value) ? "long" : "double";
+        if (typeof value === "object") return pascalCase(name);
+        return "object";
+    };
+
+    const generateCsharpClasses = (object, name = "Root", classes = []) => {
+        if (!object || typeof object !== "object" || Array.isArray(object)) return classes;
+
+        Object.entries(object).forEach(([key, val]) => {
+            if (val && typeof val === "object") {
+                if (Array.isArray(val)) {
+                    val.forEach((item) => {
+                        if (item && typeof item === "object" && !Array.isArray(item)) {
+                            generateCsharpClasses(item, pascalCase(`${key}Item`), classes);
+                        }
+                    });
+                } else {
+                    generateCsharpClasses(val, pascalCase(key), classes);
+                }
+            }
+        });
+
+        const fields = Object.entries(object).map(([key, val]) => `    public ${csharpType(val, key)} ${pascalCase(key)} { get; set; }`).join("\n");
+        classes.push(`public class ${pascalCase(name)}\n{\n${fields}\n}`);
+        return classes;
+    };
+
+    const toCsharp = (value) => {
+        if (Array.isArray(value)) {
+            if (value.length === 0 || typeof value[0] !== "object" || value[0] === null) {
+                return `using System.Collections.Generic;\n\npublic class Root : List<dynamic> {}`;
+            }
+            const classes = generateCsharpClasses(value[0], "RootItem");
+            return `using System.Collections.Generic;\n\n${classes.join("\n\n")}\n\npublic class Root : List<RootItem> {}`;
+        }
+        if (!value || typeof value !== "object") {
+            throw new Error("C# conversion requires an object or array.");
+        }
+        return `using System.Collections.Generic;\n\n${generateCsharpClasses(value).join("\n\n")}`;
+    };
+
+    const pythonType = (value) => {
+        if (value === null) return "Optional[Any]";
+        if (Array.isArray(value)) return value.length === 0 ? "List[Any]" : `List[${pythonType(value[0])}]`;
+        if (typeof value === "string") return "str";
+        if (typeof value === "boolean") return "bool";
+        if (typeof value === "number") return Number.isInteger(value) ? "int" : "float";
+        if (typeof value === "object") return "Dict[str, Any]";
+        return "Any";
+    };
+
+    const toPython = (value) => {
+        if (!value || typeof value !== "object") {
+            throw new Error("Python conversion requires an object or array.");
+        }
+
+        if (Array.isArray(value)) {
+            return `from typing import Any, List\n\nData = ${JSON.stringify(value, null, 4)}`;
+        }
+
+        const fields = Object.entries(value).map(([key, item]) => `    ${camelCase(key)}: ${pythonType(item)}`).join("\n");
+
+        return `from dataclasses import dataclass\nfrom typing import Any, Dict, List, Optional\n\n\n@dataclass\nclass ${pascalCase("Root")}:\n${fields}`;
+    };
+
+    const generateTypeScript = (value, name = "Root", interfaces = []) => {
+        const typeOf = (item, key) => {
+            if (item === null) return "null";
+            if (Array.isArray(item)) return item.length === 0 ? "unknown[]" : `Array<${typeOf(item[0], `${key}Item`)}>`;
+            if (typeof item === "string") return "string";
+            if (typeof item === "boolean") return "boolean";
+            if (typeof item === "number") return "number";
+            if (typeof item === "object") {
+                const interfaceName = pascalCase(key);
+                generateTypeScript(item, interfaceName, interfaces);
+                return interfaceName;
+            }
+            return "unknown";
+        };
+
+        if (!value || typeof value !== "object" || Array.isArray(value)) {
+            return JSON.stringify(typeOf(value, name));
+        }
+
+        const fields = Object.entries(value).map(([key, item]) => `    ${key}: ${typeOf(item, key)};`).join("\n");
+        const result = `{\n${fields}\n}`;
+
+        if (name !== "Root") {
+            interfaces.push(`export interface ${name} ${result}`);
+        }
+
+        return result;
+    };
+
+    const toTypeScript = (value) => {
+        const interfaces = [];
+        if (Array.isArray(value)) {
+            if (value.length === 0 || typeof value[0] !== "object" || value[0] === null) {
+                return `export type Root = any[];`;
+            }
+            generateTypeScript(value[0], "RootItem", interfaces);
+            return `export type Root = RootItem[];\n\n${interfaces.join("\n\n")}`;
+        }
+        
+        const rootInterface = generateTypeScript(value, "Root", interfaces);
+        return `export interface Root ${rootInterface}\n\n${interfaces.join("\n\n")}`;
+    };
+
+    const parseInput = () => {
+        const source = editor.value.trim();
+        if (!source) throw new Error("Input is empty.");
+
+        const inputFormat = inputFormatSelect.value;
+
+        if (inputFormat === "json") {
+            try {
+                return JSON.parse(source);
+            } catch (error) {
+                throw error instanceof SyntaxError ? new Error(error.message) : error;
+            }
+        }
+
+        try {
+            switch (inputFormat) {
+                case "yaml": return parseYaml(source);
+                case "toml": return parseToml(source);
+                case "xml": return parseXml(source);
+                case "csv": return parseCsv(source);
+                case "markdown": return parseMarkdown(source);
+                default:
+                    throw new Error(`Parsing from ${formatNames[inputFormat]} is not supported.`);
+            }
+        } catch (error) {
+            if (error instanceof Error) throw error;
+            throw new Error("Failed to parse input.");
+        }
+    };
+
+    const convert = (value, format) => {
+        switch (format) {
+            case "json": return JSON.stringify(value, null, 2);
+            case "yaml": return toYaml(value);
+            case "toml":
+                if (!value || typeof value !== "object" || Array.isArray(value)) {
+                    throw new Error("TOML requires an object at the root.");
+                }
+                return toToml(value);
+            case "xml": return `<?xml version="1.0" encoding="UTF-8"?>\n${toXml(value)}`;
+            case "csv": return toCsv(value);
+            case "markdown": return toMarkdown(value);
+            case "typescript": return toTypeScript(value);
+            case "rust": return toRust(value);
+            case "go": return toGo(value);
+            case "csharp": return toCsharp(value);
+            case "python": return toPython(value);
+            default: throw new Error(`Unsupported format: ${format}`);
+        }
+    };
+
+    const updateStatus = (element, value) => {
+        element.textContent = value;
+    };
+
+    const flashButton = (button, message, duration = 1400) => {
+        const original = button.textContent;
+        button.textContent = message;
+        window.setTimeout(() => {
+            button.textContent = original;
+        }, duration);
+    };
+
+    const render = () => {
+        inputError.hidden = true;
+        conversionError.hidden = true;
+
+        convertBackButton.hidden = !supportedInputs.includes(formatSelect.value);
+
+        try {
+            const value = parseInput();
+
+            updateStatus(inputStatus, "Valid");
+            inputStatus.classList.remove("invalid");
+
+            const inputFormat = inputFormatSelect.value;
+            inputLabel.textContent = formatNames[inputFormat];
+
+            const format = formatSelect.value;
+            const result = convert(value, format);
+
+            output.value = result;
+            outputLabel.textContent = formatNames[format];
+            outputSize.textContent = `${result.length.toLocaleString()} chars`;
+
+            updateStatus(outputStatus, "Converted");
+        } catch (error) {
+            output.value = "";
+
+            updateStatus(inputStatus, "Invalid");
+            inputStatus.classList.add("invalid");
+
+            updateStatus(outputStatus, "Error");
+
+            const message = error instanceof Error ? error.message : "Conversion failed.";
+
+            if (
+                (message.includes("JSON") && inputFormatSelect.value === "json") ||
+                message.includes("Unexpected") ||
+                message.includes("position") ||
+                message.includes("is not supported") ||
+                message.includes("Input is empty")
+            ) {
+                inputError.textContent = message;
+                inputError.hidden = false;
+            } else {
+                conversionError.textContent = message;
+                conversionError.hidden = false;
+            }
+
+            outputSize.textContent = "Invalid";
+        }
+    };
+
+    editor.addEventListener("input", render);
+    formatSelect.addEventListener("change", render);
+    inputFormatSelect.addEventListener("change", render);
+
+    resetButton.addEventListener("click", () => {
+        editor.value = defaultJson;
+        inputFormatSelect.value = "json";
+        formatSelect.value = "yaml";
+        render();
+    });
+
+    formatButton.addEventListener("click", () => {
+        try {
+            const value = parseInput();
+            const inputFormat = inputFormatSelect.value;
+
+            if (inputFormat === "json") {
+                editor.value = JSON.stringify(value, null, 2);
+            } else {
+                editor.value = convert(value, inputFormat);
+            }
+
+            render();
+            flashButton(formatButton, "Formatted");
+        } catch {
+            flashButton(formatButton, "Invalid");
+        }
+    });
+
+    copyButton.addEventListener("click", async () => {
+        if (!output.value) {
+            flashButton(copyButton, "Nothing");
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(output.value);
+            flashButton(copyButton, "Copied");
+        } catch {
+            flashButton(copyButton, "Failed");
+        }
+    });
+
+    downloadButton.addEventListener("click", () => {
+        if (!output.value) {
+            flashButton(downloadButton, "Nothing");
+            return;
+        }
+
+        const format = formatSelect.value;
+        const extension = extensions[format];
+        const blob = new Blob([output.value], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `kitonoka.${extension}`;
+
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+    });
+
+    convertBackButton.addEventListener("click", () => {
+        if (!output.value) return;
+        
+        const newInputFormat = formatSelect.value;
+        const newOutputFormat = inputFormatSelect.value;
+        
+        editor.value = output.value;
+        inputFormatSelect.value = newInputFormat;
+        formatSelect.value = newOutputFormat;
+        
+        render();
+    });
+
+    render();
+</script>
+
+<style>
+    .format-convert {
+        width: min(1400px, calc(100% - 2rem));
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 4rem 0;
+    }
+
+    .header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .heading {
+        min-width: 0;
+    }
+
+    .back {
+        display: inline-block;
+        margin-bottom: 2.5rem;
+        color: var(--foreground-muted);
+        font-size: 0.85rem;
+        transition: color 160ms ease;
+    }
+
+    .back:hover {
+        color: var(--foreground);
+    }
+
+    .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--accent);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+    }
+
+    .description {
+        max-width: 560px;
+        margin: 1rem 0 0;
+        color: var(--foreground-muted);
+        line-height: 1.6;
+    }
+
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .actions button {
+        padding: 0.65rem 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: 0.55rem;
+        background: var(--background-secondary);
+        color: var(--foreground);
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition:
+            border-color 160ms ease,
+            transform 160ms ease,
+            background 160ms ease;
+    }
+
+    .actions button:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+    }
+
+    .actions button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: white;
+    }
+
+    .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+        padding: 0.65rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        background: var(--background-secondary);
+    }
+
+    .format-group {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+    }
+
+    .format-label {
+        color: var(--foreground-muted);
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    select {
+        min-width: 130px;
+        padding: 0.5rem 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: 0.45rem;
+        outline: 0;
+        background: var(--background);
+        color: var(--foreground);
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    select:focus {
+        border-color: var(--accent);
+    }
+
+    .output-status {
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .workspace {
+        display: grid;
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(0, 1fr);
+        min-height: 650px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 0.8rem;
+        background: var(--background-secondary);
+    }
+
+    .panel {
+        position: relative;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .editor-panel {
+        border-right: 1px solid var(--border);
+    }
+
+    .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        padding: 0 0.9rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .panel-header-right {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .convert-back-btn {
+        padding: 0.3rem 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 0.35rem;
+        background: var(--background);
+        color: var(--foreground-muted);
+        font-size: 0.65rem;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        transition: all 150ms ease;
+    }
+
+    .convert-back-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .status {
+        color: var(--accent);
+    }
+
+    .status.invalid {
+        color: #fca5a5;
+    }
+
+    .dimensions {
+        color: var(--foreground-muted);
+        font-weight: 500;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    textarea {
+        width: 100%;
+        min-height: 608px;
+        flex: 1;
+        resize: none;
+        padding: 1.25rem;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--foreground);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.82rem;
+        line-height: 1.7;
+        tab-size: 2;
+    }
+
+    textarea[readonly] {
+        cursor: text;
+    }
+
+    textarea::selection {
+        background: var(--accent);
+        color: white;
+    }
+
+    .error {
+        position: absolute;
+        right: 1rem;
+        bottom: 1rem;
+        left: 1rem;
+        padding: 0.8rem 1rem;
+        border: 1px solid #7f1d1d;
+        border-radius: 0.55rem;
+        background: var(--background-secondary);
+        color: #fca5a5;
+        font-size: 0.8rem;
+        line-height: 1.5;
+        z-index: 2;
+    }
+
+    @media (max-width: 900px) {
+        .header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .actions {
+            justify-content: flex-start;
+        }
+
+        .workspace {
+            grid-template-columns: 1fr;
+        }
+
+        .editor-panel {
+            min-height: 500px;
+            border-right: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        textarea {
+            min-height: 500px;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .format-convert {
+            width: min(100% - 1.5rem, 1400px);
+            padding: 2.5rem 0;
+        }
+
+        .back {
+            margin-bottom: 2rem;
+        }
+
+        .actions {
+            width: 100%;
+        }
+
+        .actions button {
+            flex: 1;
+        }
+
+        .toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .format-group {
+            justify-content: space-between;
+        }
+
+        select {
+            flex: 1;
+        }
+
+        .workspace {
+            min-height: 0;
+        }
+    }
+</style>
