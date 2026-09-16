@@ -50,6 +50,12 @@ Client-side regular expression testing and debugging tool with match highlightin
 
 [View project →](https://kitonoka.github.io/projects/regex/)
 
+### Canvas
+
+Create, edit and export freeform node canvases from JSON or Obsidian Canvas files.
+
+[View project →](https://kitonoka.github.io/projects/canvas/)
+
 ## GitHub Projects
 
 Public repositories are fetched from the GitHub API during the Astro build.

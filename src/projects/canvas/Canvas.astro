@@ -1,0 +1,6372 @@
+---
+const defaultJson = `{
+  "nodes": [
+    {
+      "id": "basic-node",
+      "text": "Only id and text are required.",
+      "x": 120,
+      "y": 160
+    },
+    {
+      "id": "styled-node",
+      "header": "Optional Properties",
+      "text": "Color, border, width, and radius are optional.",
+      "x": 520,
+      "y": 160,
+      "color": "#3b82f6",
+      "borderColor": "#2c2c32",
+      "borderWidth": 10,
+      "radius": 15
+    },
+    {
+      "id": "custom-node",
+      "header": "Unique Values",
+      "text": "Every node can have its own unique properties.",
+      "x": 320,
+      "y": 460,
+      "color": "#22c55e",
+      "radius": 18
+    }
+  ],
+  "edges": [
+    {
+      "id": "basic-styled",
+      "fromNode": "basic-node",
+      "toNode": "styled-node",
+      "fromSide": "right",
+      "toSide": "left",
+      "color": "#8b5cf6",
+      "width": 2,
+      "style": "solid",
+      "end": "arrow"
+    },
+    {
+      "id": "styled-custom",
+      "fromNode": "styled-node",
+      "toNode": "custom-node",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "color": "#3b82f6",
+      "width": 2,
+      "style": "solid",
+      "end": "arrow"
+    },
+    {
+      "id": "custom-basic",
+      "fromNode": "custom-node",
+      "toNode": "basic-node",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "color": "#22c55e",
+      "width": 2,
+      "style": "solid",
+      "end": "arrow"
+    }
+  ],
+  "groups": []
+}`;
+---
+
+<main class="canvas-page">
+  <header class="header">
+    <div class="heading">
+      <a class="back" href="/">← Kitonoka</a>
+
+  <p class="eyebrow">Project</p>
+
+  <h1>Canvas</h1>
+
+  <p class="description">
+    Create, edit and export freeform node canvases from JSON or Obsidian
+    Canvas files.
+  </p>
+</div>
+
+<div class="actions">
+  <button id="import" type="button">Import</button>
+  <button id="reset" type="button">Reset</button>
+  <button id="format" type="button">Format</button>
+
+  <div class="export">
+    <button
+      id="export"
+      class="primary export-trigger"
+      type="button"
+      aria-expanded="false"
+    >
+      Export
+      <span>⌄</span>
+    </button>
+
+    <div id="export-menu" class="export-menu" hidden>
+      <button data-export="canvas" type="button">
+        Canvas
+        <span>.canvas</span>
+      </button>
+
+      <button data-export="svg" type="button">
+        SVG
+        <span>Vector</span>
+      </button>
+
+      <button data-export="png" type="button">
+        PNG
+        <span>Image</span>
+      </button>
+    </div>
+  </div>
+
+  <input
+    id="file"
+    type="file"
+    accept=".canvas,.json,application/json"
+    hidden
+  />
+</div>
+
+  </header>
+
+  <section class="workspace">
+    <div class="editor-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="panel-dot"></span>
+          JSON
+        </div>
+
+    <button
+      id="editor-collapse"
+      class="panel-icon"
+      type="button"
+      title="Toggle editor"
+    >
+      ◧
+    </button>
+  </div>
+
+  <textarea
+    id="editor"
+    spellcheck="false"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+  >{defaultJson}</textarea>
+
+  <div class="editor-footer">
+    <span id="status">Ready</span>
+    <span>Canvas</span>
+  </div>
+
+  <div id="error" class="error" hidden></div>
+</div>
+
+<div class="canvas-panel">
+  <div class="canvas-toolbar">
+    <div class="tools">
+      <button
+        id="select"
+        class="tool active"
+        type="button"
+        title="Select"
+      >
+        ↖
+      </button>
+
+      <button
+        id="pan"
+        class="tool"
+        type="button"
+        title="Pan"
+      >
+        ✥
+      </button>
+
+      <button
+        id="connect"
+        class="tool"
+        type="button"
+        title="Connect nodes"
+      >
+        ⌁
+      </button>
+
+      <span class="separator"></span>
+
+      <button id="add" class="add-node" type="button">
+        <span>+</span>
+        Add node
+      </button>
+
+      <button id="add-group" class="tool-text" type="button">
+        + Group
+      </button>
+
+      <button id="ungroup" class="tool-text" type="button">
+        Ungroup
+      </button>
+
+      <button id="fit" class="tool-text" type="button">
+        Fit
+      </button>
+    </div>
+
+    <div class="canvas-stats">
+      <span id="count">0 nodes</span>
+      <span id="group-count">0 groups</span>
+      <span id="selection-count">0 selected</span>
+      <span id="zoom">100%</span>
+    </div>
+  </div>
+
+  <div id="canvas" class="canvas" tabindex="0">
+    <svg id="edges" class="edges" aria-hidden="true">
+      <defs>
+        <marker
+          id="arrow"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+        >
+          <path
+            d="M 0 0 L 10 5 L 0 10 z"
+            fill="context-stroke"
+          ></path>
+        </marker>
+
+        <marker
+          id="circle-end"
+          viewBox="0 0 10 10"
+          refX="5"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto"
+        >
+          <circle
+            cx="5"
+            cy="5"
+            r="3"
+            fill="context-stroke"
+          ></circle>
+        </marker>
+      </defs>
+    </svg>
+
+    <div id="groups" class="groups"></div>
+    <div id="nodes" class="nodes"></div>
+
+    <div id="selection-box" class="selection-box" hidden></div>
+
+    <div id="empty" class="empty" hidden>
+      <div class="empty-icon">◇</div>
+      <strong>Empty canvas</strong>
+      <span>Add a node or import a canvas.</span>
+    </div>
+  </div>
+
+  <div class="canvas-footer">
+    <div class="footer-left">
+      <span id="mode">Select</span>
+
+      <span class="footer-hint">
+        Drag from a node handle to connect · Drag to move · Shift-click
+        multi-select · MMB pan
+      </span>
+    </div>
+
+    <div class="zoom-controls">
+      <button id="zoom-out" type="button">−</button>
+
+      <button id="zoom-reset" type="button">100%</button>
+
+      <button id="zoom-in" type="button">+</button>
+    </div>
+  </div>
+</div>
+
+  </section>
+</main>
+
+<script define:vars={{ defaultJson }}>
+  const editor = document.querySelector("#editor");
+  const error = document.querySelector("#error");
+  const status = document.querySelector("#status");
+  const canvas = document.querySelector("#canvas");
+  const nodesEl = document.querySelector("#nodes");
+  const groupsEl = document.querySelector("#groups");
+  const edgesEl = document.querySelector("#edges");
+  const selectionBox = document.querySelector("#selection-box");
+  const empty = document.querySelector("#empty");
+  const count = document.querySelector("#count");
+  const groupCount = document.querySelector("#group-count");
+  const selectionCount = document.querySelector("#selection-count");
+  const zoomLabel = document.querySelector("#zoom");
+  const modeLabel = document.querySelector("#mode");
+
+  const importButton = document.querySelector("#import");
+  const exportButton = document.querySelector("#export");
+  const exportMenu = document.querySelector("#export-menu");
+  const fileInput = document.querySelector("#file");
+  const resetButton = document.querySelector("#reset");
+  const formatButton = document.querySelector("#format");
+  const editorCollapseButton =
+    document.querySelector("#editor-collapse");
+
+  const selectButton = document.querySelector("#select");
+  const panButton = document.querySelector("#pan");
+  const connectButton = document.querySelector("#connect");
+  const addButton = document.querySelector("#add");
+  const addGroupButton = document.querySelector("#add-group");
+  const ungroupButton = document.querySelector("#ungroup");
+  const fitButton = document.querySelector("#fit");
+
+  const zoomOutButton = document.querySelector("#zoom-out");
+  const zoomResetButton = document.querySelector("#zoom-reset");
+  const zoomInButton = document.querySelector("#zoom-in");
+
+  if (
+    !editor ||
+    !error ||
+    !status ||
+    !canvas ||
+    !nodesEl ||
+    !groupsEl ||
+    !edgesEl ||
+    !selectionBox ||
+    !empty ||
+    !count ||
+    !groupCount ||
+    !selectionCount ||
+    !zoomLabel ||
+    !modeLabel ||
+    !importButton ||
+    !exportButton ||
+    !exportMenu ||
+    !fileInput ||
+    !resetButton ||
+    !formatButton ||
+    !selectButton ||
+    !panButton ||
+    !connectButton ||
+    !addButton ||
+    !addGroupButton ||
+    !ungroupButton ||
+    !fitButton ||
+    !zoomOutButton ||
+    !zoomResetButton ||
+    !zoomInButton
+  ) {
+    throw new Error("Canvas failed to initialize.");
+  }
+
+  let canvasData = {
+    nodes: [],
+    edges: [],
+    groups: [],
+  };
+
+  const selectedNodes = new Set();
+  const selectedGroups = new Set();
+
+  let connectingNode = null;
+  let connectionDrag = null;
+  let connectionTarget = null;
+  let mode = "select";
+
+  let zoom = 1;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  let dragging = null;
+  let resizing = null;
+  let panning = null;
+  let selection = null;
+
+  let editorCollapsed = false;
+  let hoverGroupId = null;
+
+  const history = [];
+  let historyIndex = -1;
+  let historyRestoring = false;
+
+  const colors = [
+    "#8b5cf6",
+    "#3b82f6",
+    "#06b6d4",
+    "#22c55e",
+    "#eab308",
+    "#f97316",
+    "#ef4444",
+    "#ec4899",
+  ];
+
+  const clamp = (value, min, max) =>
+    Math.min(Math.max(value, min), max);
+
+  function uid(prefix = "node") {
+    return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  function cloneCanvasData(data) {
+    return JSON.parse(JSON.stringify(data));
+  }
+
+  function saveHistory() {
+    if (historyRestoring) {
+      return;
+    }
+
+    const snapshot = cloneCanvasData(canvasData);
+    const current = history[historyIndex];
+
+    if (
+      current &&
+      JSON.stringify(current) === JSON.stringify(snapshot)
+    ) {
+      return;
+    }
+
+    history.splice(historyIndex + 1);
+    history.push(snapshot);
+
+    if (history.length > 100) {
+      history.shift();
+    }
+
+    historyIndex = history.length - 1;
+  }
+
+  function restoreHistory(index) {
+    if (
+      index < 0 ||
+      index >= history.length
+    ) {
+      return;
+    }
+
+    historyRestoring = true;
+
+    canvasData = cloneCanvasData(
+      history[index],
+    );
+
+    historyIndex = index;
+
+    clearSelection();
+
+    connectingNode = null;
+    connectionDrag = null;
+    connectionTarget = null;
+    dragging = null;
+    resizing = null;
+    panning = null;
+    selection = null;
+    hoverGroupId = null;
+
+    editor.value = JSON.stringify(
+      canvasData,
+      null,
+      2,
+    );
+
+    error.hidden = true;
+
+    render();
+
+    historyRestoring = false;
+
+    setStatus(
+      index === history.length - 1
+        ? "Restored"
+        : "Undo",
+    );
+  }
+
+  function undo() {
+    if (historyIndex <= 0) {
+      return;
+    }
+
+    restoreHistory(
+      historyIndex - 1,
+    );
+  }
+
+  function redo() {
+    if (
+      historyIndex >=
+      history.length - 1
+    ) {
+      return;
+    }
+
+    restoreHistory(
+      historyIndex + 1,
+    );
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function escapeXml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&apos;");
+  }
+
+  function normalizeSide(side, fallback) {
+    return ["left", "right", "top", "bottom"].includes(side)
+      ? side
+      : fallback;
+  }
+
+  function normalizeCanvas(value) {
+    if (!value || typeof value !== "object") {
+      throw new Error("JSON must contain an object.");
+    }
+
+    if (!Array.isArray(value.nodes)) {
+      throw new Error("Canvas JSON must contain a nodes array.");
+    }
+
+    const nodes = value.nodes.map((node, index) => {
+      const normalized = {
+        ...node,
+
+        id: String(node.id ?? `node-${index + 1}`),
+
+        header:
+          node.header ??
+          node.label ??
+          node.title ??
+          "Node",
+
+        text:
+          typeof node.text === "string"
+            ? node.text
+            : node.text == null
+              ? ""
+              : String(node.text),
+
+        x: Number(node.x ?? index * 320),
+        y: Number(node.y ?? 100),
+
+        ...(node.color
+          ? { color: String(node.color) }
+          : {}),
+      };
+
+      if (
+        node.width !== undefined &&
+        node.width !== null &&
+        Number.isFinite(Number(node.width))
+      ) {
+        normalized.width = Math.max(140, Number(node.width));
+      }
+
+      if (
+        node.height !== undefined &&
+        node.height !== null &&
+        Number.isFinite(Number(node.height))
+      ) {
+        normalized.height = Math.max(90, Number(node.height));
+      }
+
+      if (
+        node.borderColor !== undefined &&
+        node.borderColor !== null &&
+        String(node.borderColor).trim() !== ""
+      ) {
+        normalized.borderColor = String(node.borderColor);
+      }
+
+      if (
+        node.borderWidth !== undefined &&
+        node.borderWidth !== null &&
+        Number.isFinite(Number(node.borderWidth))
+      ) {
+        normalized.borderWidth = Number(node.borderWidth);
+      }
+
+      if (
+        node.radius !== undefined &&
+        node.radius !== null &&
+        Number.isFinite(Number(node.radius))
+      ) {
+        normalized.radius = Number(node.radius);
+      }
+
+      return normalized;
+    });
+
+    const edges = Array.isArray(value.edges)
+      ? value.edges.map((edge, index) => ({
+          ...edge,
+
+          id: String(edge.id ?? `edge-${index + 1}`),
+
+          fromNode: String(edge.fromNode ?? ""),
+          toNode: String(edge.toNode ?? ""),
+
+          color: edge.color || "#52525b",
+
+          width:
+            edge.width !== undefined &&
+            Number.isFinite(Number(edge.width))
+              ? Number(edge.width)
+              : 2,
+
+          style: edge.style || "solid",
+          end: edge.end || "arrow",
+
+          fromSide: normalizeSide(
+            edge.fromSide,
+            "right",
+          ),
+
+          toSide: normalizeSide(
+            edge.toSide,
+            "left",
+          ),
+        }))
+      : [];
+
+    const groups = Array.isArray(value.groups)
+      ? value.groups.map((group, index) => ({
+          ...group,
+
+          id: String(
+            group.id ?? `group-${index + 1}`,
+          ),
+
+          label:
+            group.label ??
+            group.header ??
+            "Group",
+
+          x: Number(group.x ?? 0),
+          y: Number(group.y ?? 0),
+
+          width: Math.max(
+            180,
+            Number(group.width ?? 500),
+          ),
+
+          height: Math.max(
+            120,
+            Number(group.height ?? 340),
+          ),
+
+          color:
+            group.color ||
+            colors[index % colors.length],
+        }))
+      : [];
+
+    return {
+      ...value,
+      nodes,
+      edges,
+      groups,
+    };
+  }
+
+  function getNodeAutoSize(node) {
+    const header = String(
+      node.header ?? "Node",
+    );
+
+    const text = String(
+      node.text ?? "",
+    ).replaceAll("\r", "");
+
+    const lines = text.split("\n");
+
+    const longestLine = Math.max(
+      header.length,
+      ...lines.map(
+        (line) => line.length,
+      ),
+      1,
+    );
+
+    const width = clamp(
+      180 +
+        Math.min(
+          longestLine * 6.5,
+          300,
+        ),
+      180,
+      520,
+    );
+
+    const contentLines = Math.max(
+      1,
+      lines.length,
+    );
+
+    const height = clamp(
+      82 +
+        contentLines * 21 +
+        Math.min(
+          text.length / 70,
+          5,
+        ) *
+          12,
+      110,
+      460,
+    );
+
+    return {
+      width,
+      height,
+    };
+  }
+
+  function getNodeSize(node) {
+    const auto =
+      getNodeAutoSize(node);
+
+    return {
+      width:
+        node.width !== undefined
+          ? Math.max(
+              140,
+              Number(node.width),
+            )
+          : auto.width,
+
+      height:
+        node.height !== undefined
+          ? Math.max(
+              90,
+              Number(node.height),
+            )
+          : auto.height,
+    };
+  }
+
+  function previewValue(value) {
+    if (typeof value === "string") {
+      return value.length > 180
+        ? `${value.slice(0, 180)}…`
+        : value;
+    }
+
+    if (Array.isArray(value)) {
+      return `[${value.length} items]`;
+    }
+
+    if (
+      value &&
+      typeof value === "object"
+    ) {
+      return `{${
+        Object.keys(value).length
+      } properties}`;
+    }
+
+    return String(value);
+  }
+
+  function jsonToCanvas(value) {
+    if (
+      value &&
+      typeof value === "object" &&
+      Array.isArray(value.nodes)
+    ) {
+      return normalizeCanvas(value);
+    }
+
+    const nodes = [];
+    const edges = [];
+
+    if (Array.isArray(value)) {
+      nodes.push({
+        id: "root",
+        header: "Root",
+        text: `Array with ${value.length} items`,
+        x: 80,
+        y: 80,
+        color: colors[0],
+      });
+
+      value.forEach(
+        (item, index) => {
+          nodes.push({
+            id: `item-${index}`,
+            header: `Item ${index + 1}`,
+            text: previewValue(item),
+            x:
+              420 +
+              (index % 3) *
+                320,
+            y:
+              80 +
+              Math.floor(
+                index / 3,
+              ) *
+                220,
+            color:
+              colors[
+                (index + 1) %
+                  colors.length
+              ],
+          });
+
+          edges.push({
+            id: `root-item-${index}`,
+            fromNode: "root",
+            toNode: `item-${index}`,
+            fromSide: "right",
+            toSide: "left",
+          });
+        },
+      );
+
+      return {
+        nodes,
+        edges,
+        groups: [],
+      };
+    }
+
+    if (
+      value &&
+      typeof value === "object"
+    ) {
+      const entries =
+        Object.entries(value);
+
+      entries.forEach(
+        ([key, val], index) => {
+          nodes.push({
+            id: `node-${index}`,
+            header: key,
+            text:
+              typeof val ===
+              "string"
+                ? val
+                : previewValue(val),
+            x:
+              80 +
+              (index % 3) *
+                340,
+            y:
+              80 +
+              Math.floor(
+                index / 3,
+              ) *
+                230,
+            color:
+              colors[
+                index %
+                  colors.length
+              ],
+          });
+        },
+      );
+
+      const byKey = new Map(
+        entries.map(
+          ([key], index) => [
+            key,
+            `node-${index}`,
+          ],
+        ),
+      );
+
+      entries.forEach(
+        ([key, value]) => {
+          if (
+            !value ||
+            typeof value !==
+              "object"
+          ) {
+            return;
+          }
+
+          const dependencies =
+            value.dependsOn ??
+            value.dependencies ??
+            value.requires;
+
+          if (
+            !Array.isArray(
+              dependencies,
+            )
+          ) {
+            return;
+          }
+
+          for (const dependency of dependencies) {
+            if (
+              !byKey.has(
+                dependency,
+              )
+            ) {
+              continue;
+            }
+
+            edges.push({
+              id: `${key}-${dependency}`,
+              fromNode:
+                byKey.get(
+                  dependency,
+                ),
+              toNode:
+                byKey.get(key),
+              fromSide: "right",
+              toSide: "left",
+            });
+          }
+        },
+      );
+
+      return {
+        nodes,
+        edges,
+        groups: [],
+      };
+    }
+
+    return {
+      nodes: [
+        {
+          id: "root",
+          header: "Value",
+          text: previewValue(value),
+          x: 100,
+          y: 100,
+          color: colors[0],
+        },
+      ],
+      edges: [],
+      groups: [],
+    };
+  }
+
+  function setStatus(
+    message,
+    success = true,
+  ) {
+    status.textContent =
+      message;
+
+    status.dataset.error =
+      success
+        ? "false"
+        : "true";
+  }
+
+  function updateViewTransform() {
+    const transform =
+      `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`;
+
+    nodesEl.style.transform =
+      transform;
+
+    groupsEl.style.transform =
+      transform;
+
+    edgesEl.style.transform =
+      transform;
+
+    zoomLabel.textContent =
+      `${Math.round(zoom * 100)}%`;
+
+    zoomResetButton.textContent =
+      `${Math.round(zoom * 100)}%`;
+  }
+
+  function worldPoint(event) {
+    const rect =
+      canvas.getBoundingClientRect();
+
+    return {
+      x:
+        (event.clientX -
+          rect.left -
+          offsetX) /
+        zoom,
+
+      y:
+        (event.clientY -
+          rect.top -
+          offsetY) /
+        zoom,
+    };
+  }
+
+  function clearSelection() {
+    selectedNodes.clear();
+    selectedGroups.clear();
+  }
+
+  function updateSelectionUI() {
+    document
+      .querySelectorAll(
+        ".node",
+      )
+      .forEach(
+        (element) => {
+          element.classList.toggle(
+            "selected",
+            selectedNodes.has(
+              element.dataset.id,
+            ),
+          );
+        },
+      );
+
+    document
+      .querySelectorAll(
+        ".canvas-group",
+      )
+      .forEach(
+        (element) => {
+          element.classList.toggle(
+            "selected",
+            selectedGroups.has(
+              element.dataset.id,
+            ),
+          );
+        },
+      );
+
+    selectionCount.textContent =
+      `${
+        selectedNodes.size +
+        selectedGroups.size
+      } selected`;
+  }
+
+  function selectNode(
+    id,
+    additive = false,
+  ) {
+    if (!additive) {
+      clearSelection();
+    }
+
+    selectedGroups.clear();
+
+    if (
+      additive &&
+      selectedNodes.has(id)
+    ) {
+      selectedNodes.delete(id);
+    } else {
+      selectedNodes.add(id);
+    }
+
+    updateSelectionUI();
+  }
+
+  function selectGroup(
+    id,
+    additive = false,
+  ) {
+    if (!additive) {
+      clearSelection();
+    }
+
+    selectedNodes.clear();
+
+    if (
+      additive &&
+      selectedGroups.has(id)
+    ) {
+      selectedGroups.delete(id);
+    } else {
+      selectedGroups.add(id);
+    }
+
+    updateSelectionUI();
+  }
+
+  function getGroupAtPoint(
+    x,
+    y,
+  ) {
+    return (
+      canvasData.groups
+        .filter(
+          (group) =>
+            x >= group.x &&
+            x <=
+              group.x +
+                group.width &&
+            y >= group.y &&
+            y <=
+              group.y +
+                group.height,
+        )
+        .sort(
+          (a, b) =>
+            a.width *
+              a.height -
+            b.width *
+              b.height,
+        )[0] ?? null
+    );
+  }
+
+  function updateHoveredGroup(
+    point,
+  ) {
+    const group =
+      getGroupAtPoint(
+        point.x,
+        point.y,
+      );
+
+    const nextId =
+      group?.id ?? null;
+
+    if (
+      hoverGroupId ===
+      nextId
+    ) {
+      return;
+    }
+
+    hoverGroupId = nextId;
+
+    document
+      .querySelectorAll(
+        ".canvas-group",
+      )
+      .forEach(
+        (element) => {
+          element.classList.toggle(
+            "drop-target",
+            element.dataset.id ===
+              hoverGroupId,
+          );
+        },
+      );
+  }
+
+  function getNodeConnectionPoint(
+    node,
+    side,
+  ) {
+    const size =
+      getNodeSize(node);
+
+    switch (side) {
+      case "left":
+        return {
+          x: node.x,
+          y:
+            node.y +
+            size.height / 2,
+        };
+
+      case "top":
+        return {
+          x:
+            node.x +
+            size.width / 2,
+          y: node.y,
+        };
+
+      case "bottom":
+        return {
+          x:
+            node.x +
+            size.width / 2,
+          y:
+            node.y +
+            size.height,
+        };
+
+      case "right":
+      default:
+        return {
+          x:
+            node.x +
+            size.width,
+          y:
+            node.y +
+            size.height / 2,
+        };
+    }
+  }
+
+  function getOppositeSide(
+    side,
+  ) {
+    switch (side) {
+      case "left":
+        return "right";
+
+      case "right":
+        return "left";
+
+      case "top":
+        return "bottom";
+
+      case "bottom":
+        return "top";
+
+      default:
+        return "left";
+    }
+  }
+
+  function getConnectionControlPoints(
+    start,
+    end,
+    startSide,
+    endSide,
+  ) {
+    const distance =
+      Math.max(
+        70,
+        Math.min(
+          180,
+          Math.max(
+            Math.abs(
+              end.x -
+                start.x,
+            ),
+            Math.abs(
+              end.y -
+                start.y,
+            ),
+          ) * 0.5,
+        ),
+      );
+
+    let c1 = {
+      ...start,
+    };
+
+    let c2 = {
+      ...end,
+    };
+
+    if (
+      startSide ===
+      "right"
+    ) {
+      c1.x += distance;
+    } else if (
+      startSide ===
+      "left"
+    ) {
+      c1.x -= distance;
+    } else if (
+      startSide ===
+      "top"
+    ) {
+      c1.y -= distance;
+    } else if (
+      startSide ===
+      "bottom"
+    ) {
+      c1.y += distance;
+    }
+
+    if (
+      endSide ===
+      "right"
+    ) {
+      c2.x += distance;
+    } else if (
+      endSide ===
+      "left"
+    ) {
+      c2.x -= distance;
+    } else if (
+      endSide ===
+      "top"
+    ) {
+      c2.y -= distance;
+    } else if (
+      endSide ===
+      "bottom"
+    ) {
+      c2.y += distance;
+    }
+
+    return {
+      c1,
+      c2,
+    };
+  }
+
+  function getConnectionTarget(
+    event,
+  ) {
+    const element =
+      document.elementFromPoint(
+        event.clientX,
+        event.clientY,
+      );
+
+    if (
+      !(element instanceof Element)
+    ) {
+      return null;
+    }
+
+    const nodeElement =
+      element.closest(
+        ".node",
+      );
+
+    if (!nodeElement) {
+      return null;
+    }
+
+    const id =
+      nodeElement.dataset.id;
+
+    if (
+      !id ||
+      !connectionDrag ||
+      id ===
+        connectionDrag.nodeId
+    ) {
+      return null;
+    }
+
+    const node =
+      canvasData.nodes.find(
+        (item) =>
+          item.id === id,
+      );
+
+    return node ?? null;
+  }
+
+  function getConnectionTargetSide(
+    node,
+    event,
+  ) {
+    const element =
+      document.elementFromPoint(
+        event.clientX,
+        event.clientY,
+      );
+
+    if (
+      !(element instanceof Element)
+    ) {
+      return getOppositeSide(
+        connectionDrag?.side,
+      );
+    }
+
+    const handle =
+      element.closest(
+        ".node-handle",
+      );
+
+    if (handle) {
+      const classes =
+        handle.classList;
+
+      if (
+        classes.contains(
+          "node-handle-left",
+        )
+      ) {
+        return "left";
+      }
+
+      if (
+        classes.contains(
+          "node-handle-right",
+        )
+      ) {
+        return "right";
+      }
+
+      if (
+        classes.contains(
+          "node-handle-top",
+        )
+      ) {
+        return "top";
+      }
+
+      if (
+        classes.contains(
+          "node-handle-bottom",
+        )
+      ) {
+        return "bottom";
+      }
+    }
+
+    const nodeElement =
+      element.closest(
+        ".node",
+      );
+
+    if (!nodeElement) {
+      return getOppositeSide(
+        connectionDrag?.side,
+      );
+    }
+
+    const rect =
+      nodeElement.getBoundingClientRect();
+
+    const distances = {
+      left: Math.abs(
+        event.clientX -
+          rect.left,
+      ),
+
+      right: Math.abs(
+        event.clientX -
+          rect.right,
+      ),
+
+      top: Math.abs(
+        event.clientY -
+          rect.top,
+      ),
+
+      bottom: Math.abs(
+        event.clientY -
+          rect.bottom,
+      ),
+    };
+
+    return Object.entries(
+      distances,
+    ).sort(
+      ([, a], [, b]) =>
+        a - b,
+    )[0][0];
+  }
+
+  function updateConnectionTarget(
+    node,
+  ) {
+    const nextId =
+      node?.id ?? null;
+
+    if (
+      connectionTarget ===
+      nextId
+    ) {
+      return;
+    }
+
+    connectionTarget =
+      nextId;
+
+    document
+      .querySelectorAll(
+        ".node.connection-target",
+      )
+      .forEach(
+        (element) => {
+          element.classList.remove(
+            "connection-target",
+          );
+        },
+      );
+
+    if (nextId) {
+      const target =
+        document.querySelector(
+          `.node[data-id="${CSS.escape(
+            nextId,
+          )}"]`,
+        );
+
+      target?.classList.add(
+        "connection-target",
+      );
+    }
+  }
+
+  function renderConnectionPreview(
+    point,
+  ) {
+    edgesEl
+      .querySelectorAll(
+        ".connection-preview",
+      )
+      .forEach(
+        (path) =>
+          path.remove(),
+      );
+
+    if (!connectionDrag) {
+      return;
+    }
+
+    const node =
+      canvasData.nodes.find(
+        (item) =>
+          item.id ===
+          connectionDrag.nodeId,
+      );
+
+    if (!node) {
+      return;
+    }
+
+    const start =
+      getNodeConnectionPoint(
+        node,
+        connectionDrag.side,
+      );
+
+    const target =
+      connectionTarget
+        ? canvasData.nodes.find(
+            (item) =>
+              item.id ===
+              connectionTarget,
+          )
+        : null;
+
+    const targetSide =
+      connectionDrag.targetSide ||
+      getOppositeSide(
+        connectionDrag.side,
+      );
+
+    const end = target
+      ? getNodeConnectionPoint(
+          target,
+          targetSide,
+        )
+      : point;
+
+    const sides =
+      getConnectionControlPoints(
+        start,
+        end,
+        connectionDrag.side,
+        targetSide,
+      );
+
+    const path =
+      document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path",
+      );
+
+    path.classList.add(
+      "edge-path",
+      "connection-preview",
+    );
+
+    path.setAttribute(
+      "d",
+      `M ${start.x} ${start.y}
+       C ${sides.c1.x} ${sides.c1.y},
+         ${sides.c2.x} ${sides.c2.y},
+         ${end.x} ${end.y}`,
+    );
+
+    path.setAttribute(
+      "stroke",
+      node.color ||
+        "#8b5cf6",
+    );
+
+    path.setAttribute(
+      "stroke-width",
+      "2",
+    );
+
+    path.setAttribute(
+      "stroke-dasharray",
+      "7 5",
+    );
+
+    path.setAttribute(
+      "marker-end",
+      "url(#arrow)",
+    );
+
+    edgesEl.appendChild(
+      path,
+    );
+  }
+
+  function beginConnectionDrag(
+    node,
+    side,
+    event,
+  ) {
+    if (
+      event.button !== 0 ||
+      mode !== "select"
+    ) {
+      return;
+    }
+
+    connectionDrag = {
+      nodeId: node.id,
+      side,
+      targetSide:
+        getOppositeSide(
+          side,
+        ),
+      lastPoint:
+        worldPoint(event),
+    };
+
+    connectionTarget = null;
+    connectingNode =
+      node.id;
+
+    clearSelection();
+    selectedNodes.add(
+      node.id,
+    );
+
+    updateSelectionUI();
+
+    document.body.classList.add(
+      "connecting-canvas",
+    );
+
+    renderNodes();
+
+    renderConnectionPreview(
+      worldPoint(event),
+    );
+
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function finishConnectionDrag(
+    event,
+  ) {
+    if (!connectionDrag) {
+      return;
+    }
+
+    const target =
+      getConnectionTarget(
+        event,
+      );
+
+    if (
+      target &&
+      target.id !==
+        connectionDrag.nodeId
+    ) {
+      const targetSide =
+        connectionDrag.targetSide ||
+        getOppositeSide(
+          connectionDrag.side,
+        );
+
+      addEdge(
+        connectionDrag.nodeId,
+        target.id,
+        connectionDrag.side,
+        targetSide,
+      );
+    }
+
+    connectionDrag = null;
+    connectionTarget = null;
+    connectingNode = null;
+
+    document.body.classList.remove(
+      "connecting-canvas",
+    );
+
+    document
+      .querySelectorAll(
+        ".node.connection-target",
+      )
+      .forEach(
+        (element) => {
+          element.classList.remove(
+            "connection-target",
+          );
+        },
+      );
+
+    edgesEl
+      .querySelectorAll(
+        ".connection-preview",
+      )
+      .forEach(
+        (path) =>
+          path.remove(),
+      );
+
+    renderNodes();
+  }
+
+  function cancelConnectionDrag() {
+    if (!connectionDrag) {
+      return;
+    }
+
+    connectionDrag = null;
+    connectionTarget = null;
+    connectingNode = null;
+
+    document.body.classList.remove(
+      "connecting-canvas",
+    );
+
+    document
+      .querySelectorAll(
+        ".node.connection-target",
+      )
+      .forEach(
+        (element) => {
+          element.classList.remove(
+            "connection-target",
+          );
+        },
+      );
+
+    edgesEl
+      .querySelectorAll(
+        ".connection-preview",
+      )
+      .forEach(
+        (path) =>
+          path.remove(),
+      );
+
+    renderNodes();
+  }
+
+  function renderEdges() {
+    edgesEl
+      .querySelectorAll(
+        ".edge-path",
+      )
+      .forEach(
+        (path) =>
+          path.remove(),
+      );
+
+    const nodeMap =
+      new Map(
+        canvasData.nodes.map(
+          (node) => [
+            node.id,
+            node,
+          ],
+        ),
+      );
+
+    for (const edge of canvasData.edges) {
+      const from =
+        nodeMap.get(
+          edge.fromNode,
+        );
+
+      const to =
+        nodeMap.get(
+          edge.toNode,
+        );
+
+      if (!from || !to) {
+        continue;
+      }
+
+      const fromSide =
+        normalizeSide(
+          edge.fromSide,
+          "right",
+        );
+
+      const toSide =
+        normalizeSide(
+          edge.toSide,
+          "left",
+        );
+
+      const start =
+        getNodeConnectionPoint(
+          from,
+          fromSide,
+        );
+
+      const end =
+        getNodeConnectionPoint(
+          to,
+          toSide,
+        );
+
+      const controls =
+        getConnectionControlPoints(
+          start,
+          end,
+          fromSide,
+          toSide,
+        );
+
+      const path =
+        document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "path",
+        );
+
+      path.classList.add(
+        "edge-path",
+      );
+
+      path.setAttribute(
+        "d",
+        `M ${start.x} ${start.y}
+         C ${controls.c1.x} ${controls.c1.y},
+           ${controls.c2.x} ${controls.c2.y},
+           ${end.x} ${end.y}`,
+      );
+
+      path.setAttribute(
+        "stroke",
+        edge.color ||
+          "#52525b",
+      );
+
+      path.setAttribute(
+        "stroke-width",
+        String(
+          edge.width ?? 2,
+        ),
+      );
+
+      if (
+        edge.style ===
+        "dashed"
+      ) {
+        path.setAttribute(
+          "stroke-dasharray",
+          "8 6",
+        );
+      } else if (
+        edge.style ===
+        "dotted"
+      ) {
+        path.setAttribute(
+          "stroke-dasharray",
+          "2 6",
+        );
+      }
+
+      if (
+        edge.end ===
+        "arrow"
+      ) {
+        path.setAttribute(
+          "marker-end",
+          "url(#arrow)",
+        );
+      } else if (
+        edge.end ===
+        "circle"
+      ) {
+        path.setAttribute(
+          "marker-end",
+          "url(#circle-end)",
+        );
+      }
+
+      edgesEl.appendChild(
+        path,
+      );
+    }
+
+    if (connectionDrag) {
+      renderConnectionPreview(
+        connectionDrag.lastPoint ?? {
+          x: 0,
+          y: 0,
+        },
+      );
+    }
+  }
+
+  function renderGroups() {
+    groupsEl.innerHTML = "";
+
+    for (const group of canvasData.groups) {
+      const groupEl =
+        document.createElement(
+          "div",
+        );
+
+      groupEl.className =
+        "canvas-group";
+
+      groupEl.dataset.id =
+        group.id;
+
+      groupEl.style.left =
+        `${group.x}px`;
+
+      groupEl.style.top =
+        `${group.y}px`;
+
+      groupEl.style.width =
+        `${group.width}px`;
+
+      groupEl.style.height =
+        `${group.height}px`;
+
+      groupEl.style.setProperty(
+        "--group-color",
+        group.color,
+      );
+
+      const header =
+        document.createElement(
+          "div",
+        );
+
+      header.className =
+        "group-header";
+
+      const color =
+        document.createElement(
+          "span",
+        );
+
+      color.className =
+        "group-color";
+
+      color.style.background =
+        group.color;
+
+      const label =
+        document.createElement(
+          "span",
+        );
+
+      label.className =
+        "group-label";
+
+      label.textContent =
+        group.label;
+
+      const deleteButton =
+        document.createElement(
+          "button",
+        );
+
+      deleteButton.type =
+        "button";
+
+      deleteButton.className =
+        "group-delete";
+
+      deleteButton.textContent =
+        "×";
+
+      deleteButton.title =
+        "Delete group";
+
+      deleteButton.addEventListener(
+        "mousedown",
+        (event) => {
+          event.stopPropagation();
+          event.preventDefault();
+        },
+      );
+
+      deleteButton.addEventListener(
+        "click",
+        (event) => {
+          event.stopPropagation();
+
+          canvasData.nodes.forEach(
+            (node) => {
+              if (
+                node.groupId ===
+                group.id
+              ) {
+                delete node.groupId;
+              }
+            },
+          );
+
+          canvasData.groups =
+            canvasData.groups.filter(
+              (item) =>
+                item.id !==
+                group.id,
+            );
+
+          selectedGroups.delete(
+            group.id,
+          );
+
+          syncEditor();
+          render();
+          saveHistory();
+        },
+      );
+
+      header.append(
+        color,
+        label,
+        deleteButton,
+      );
+
+      groupEl.appendChild(
+        header,
+      );
+
+      header.addEventListener(
+        "mousedown",
+        (event) => {
+          if (
+            event.button !== 0 ||
+            mode !== "select"
+          ) {
+            return;
+          }
+
+          if (
+            event.target instanceof
+              Element &&
+            event.target.closest(
+              ".group-delete",
+            )
+          ) {
+            return;
+          }
+
+          selectGroup(
+            group.id,
+            event.shiftKey,
+          );
+
+          const point =
+            worldPoint(event);
+
+          const originalNodes =
+            canvasData.nodes
+              .filter(
+                (node) =>
+                  node.groupId ===
+                  group.id,
+              )
+              .map((node) => ({
+                id: node.id,
+                x: node.x,
+                y: node.y,
+              }));
+
+          dragging = {
+            type: "group",
+            id: group.id,
+            startX: point.x,
+            startY: point.y,
+            groupX: group.x,
+            groupY: group.y,
+            originalNodes,
+          };
+
+          event.preventDefault();
+          event.stopPropagation();
+        },
+      );
+
+      groupsEl.appendChild(
+        groupEl,
+      );
+    }
+
+    updateSelectionUI();
+  }
+
+  function markdownToHtml(text) {
+    let html =
+      escapeHtml(text);
+
+    html = html.replace(
+      /\*\*(.+?)\*\*/g,
+      "<strong>$1</strong>",
+    );
+
+    html = html.replace(
+      /`([^`]+)`/g,
+      "<code>$1</code>",
+    );
+
+    html = html.replace(
+      /\n/g,
+      "<br>",
+    );
+
+    return html;
+  }
+
+  function renderNodes() {
+    nodesEl.innerHTML = "";
+
+    for (
+      let index = 0;
+      index <
+      canvasData.nodes.length;
+      index++
+    ) {
+      const node =
+        canvasData.nodes[index];
+
+      const color =
+        node.color ||
+        colors[
+          index %
+            colors.length
+        ];
+
+      const size =
+        getNodeSize(node);
+
+      const nodeEl =
+        document.createElement(
+          "div",
+        );
+
+      nodeEl.className =
+        "node";
+
+      nodeEl.dataset.id =
+        node.id;
+
+      nodeEl.style.left =
+        `${node.x}px`;
+
+      nodeEl.style.top =
+        `${node.y}px`;
+
+      nodeEl.style.width =
+        `${size.width}px`;
+
+      nodeEl.style.height =
+        `${size.height}px`;
+
+      nodeEl.style.setProperty(
+        "--node-color",
+        color,
+      );
+
+      nodeEl.style.borderColor =
+        node.borderColor ||
+        "#2c2c32";
+
+      nodeEl.style.borderWidth =
+        `${clamp(
+          Number(
+            node.borderWidth ??
+              1,
+          ),
+          0,
+          6,
+        )}px`;
+
+      nodeEl.style.borderRadius =
+        `${clamp(
+          Number(
+            node.radius ??
+              10,
+          ),
+          0,
+          30,
+        )}px`;
+
+      if (
+        selectedNodes.has(
+          node.id,
+        )
+      ) {
+        nodeEl.classList.add(
+          "selected",
+        );
+      }
+
+      if (
+        connectingNode ===
+        node.id
+      ) {
+        nodeEl.classList.add(
+          "connecting",
+        );
+      }
+
+      if (
+        connectionTarget ===
+        node.id
+      ) {
+        nodeEl.classList.add(
+          "connection-target",
+        );
+      }
+
+      const header =
+        document.createElement(
+          "div",
+        );
+
+      header.className =
+        "node-header";
+
+      const headerLeft =
+        document.createElement(
+          "div",
+        );
+
+      headerLeft.className =
+        "node-header-left";
+
+      const colorDot =
+        document.createElement(
+          "span",
+        );
+
+      colorDot.className =
+        "node-color";
+
+      colorDot.style.background =
+        color;
+
+      const headerText =
+        document.createElement(
+          "span",
+        );
+
+      headerText.className =
+        "node-header-title";
+
+      headerText.textContent =
+        node.header ||
+        "Node";
+
+      headerLeft.append(
+        colorDot,
+        headerText,
+      );
+
+      const actions =
+        document.createElement(
+          "div",
+        );
+
+      actions.className =
+        "node-header-actions";
+
+      const colorInput =
+        document.createElement(
+          "input",
+        );
+
+      colorInput.type =
+        "color";
+
+      colorInput.className =
+        "node-color-input";
+
+      colorInput.value =
+        /^#[0-9a-f]{6}$/i.test(
+          color,
+        )
+          ? color
+          : "#8b5cf6";
+
+      colorInput.title =
+        "Change accent color";
+
+      colorInput.addEventListener(
+        "mousedown",
+        (event) => {
+          event.stopPropagation();
+        },
+      );
+
+      colorInput.addEventListener(
+        "click",
+        (event) => {
+          event.stopPropagation();
+        },
+      );
+
+      colorInput.addEventListener(
+        "input",
+        (event) => {
+          event.stopPropagation();
+
+          node.color =
+            event.currentTarget.value;
+
+          nodeEl.style.setProperty(
+            "--node-color",
+            node.color,
+          );
+
+          colorDot.style.background =
+            node.color;
+
+          syncEditor();
+        },
+      );
+
+      colorInput.addEventListener(
+        "change",
+        () => {
+          saveHistory();
+        },
+      );
+
+      const deleteButton =
+        document.createElement(
+          "button",
+        );
+
+      deleteButton.type =
+        "button";
+
+      deleteButton.className =
+        "node-delete";
+
+      deleteButton.textContent =
+        "×";
+
+      deleteButton.title =
+        "Delete node";
+
+      deleteButton.addEventListener(
+        "click",
+        (event) => {
+          event.stopPropagation();
+
+          deleteNodes(
+            new Set([
+              node.id,
+            ]),
+          );
+        },
+      );
+
+      actions.append(
+        colorInput,
+        deleteButton,
+      );
+
+      header.append(
+        headerLeft,
+        actions,
+      );
+
+      const content =
+        document.createElement(
+          "div",
+        );
+
+      content.className =
+        "node-content";
+
+      if (
+        node.type ===
+        "file"
+      ) {
+        content.innerHTML = `
+          <div class="file-node">
+            <span class="file-icon">□</span>
+            <span>${escapeHtml(
+              node.file ??
+                node.text ??
+                "",
+            )}</span>
+          </div>
+        `;
+      } else if (
+        node.type ===
+        "link"
+      ) {
+        const url =
+          String(
+            node.url ??
+              node.text ??
+              "",
+          );
+
+        content.innerHTML = `
+          <a
+            href="${escapeHtml(url)}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >${escapeHtml(url)}</a>
+        `;
+      } else {
+        content.innerHTML =
+          markdownToHtml(
+            String(
+              node.text ??
+                "",
+            ),
+          );
+      }
+
+      const handles = [
+        [
+          "left",
+          "node-handle-left",
+          "Drag to connect",
+        ],
+        [
+          "right",
+          "node-handle-right",
+          "Drag to connect",
+        ],
+        [
+          "top",
+          "node-handle-top",
+          "Drag to connect",
+        ],
+        [
+          "bottom",
+          "node-handle-bottom",
+          "Drag to connect",
+        ],
+      ];
+
+      const handleElements =
+        handles.map(
+          ([
+            side,
+            className,
+            title,
+          ]) => {
+            const handle =
+              document.createElement(
+                "div",
+              );
+
+            handle.className =
+              `node-handle ${className}`;
+
+            handle.title =
+              title;
+
+            handle.addEventListener(
+              "mousedown",
+              (event) => {
+                beginConnectionDrag(
+                  node,
+                  side,
+                  event,
+                );
+              },
+            );
+
+            return handle;
+          },
+        );
+
+      const resize =
+        document.createElement(
+          "div",
+        );
+
+      resize.className =
+        "resize";
+
+      nodeEl.append(
+        header,
+        content,
+        ...handleElements,
+        resize,
+      );
+
+      nodeEl.addEventListener(
+        "mousedown",
+        (event) => {
+          if (
+            event.button !== 0
+          ) {
+            return;
+          }
+
+          const target =
+            event.target;
+
+          if (
+            target instanceof
+              Element &&
+            target.closest(
+              ".node-delete, .node-color-input, .resize, .node-handle",
+            )
+          ) {
+            return;
+          }
+
+          if (
+            mode ===
+            "connect"
+          ) {
+            event.stopPropagation();
+
+            if (
+              !connectingNode
+            ) {
+              connectingNode =
+                node.id;
+
+              renderNodes();
+            } else if (
+              connectingNode !==
+              node.id
+            ) {
+              addEdge(
+                connectingNode,
+                node.id,
+                "right",
+                "left",
+              );
+
+              connectingNode =
+                null;
+
+              renderNodes();
+            }
+
+            return;
+          }
+
+          if (
+            mode !==
+            "select"
+          ) {
+            return;
+          }
+
+          selectNode(
+            node.id,
+            event.shiftKey,
+          );
+
+          const point =
+            worldPoint(event);
+
+          dragging = {
+            type: "nodes",
+
+            startX: point.x,
+            startY: point.y,
+
+            originalNodes:
+              [
+                ...selectedNodes,
+              ]
+                .map(
+                  (id) => {
+                    const item =
+                      canvasData.nodes.find(
+                        (
+                          candidate,
+                        ) =>
+                          candidate.id ===
+                          id,
+                      );
+
+                    if (!item) {
+                      return null;
+                    }
+
+                    return {
+                      id,
+                      x: item.x,
+                      y: item.y,
+                    };
+                  },
+                )
+                .filter(Boolean),
+          };
+
+          event.preventDefault();
+          event.stopPropagation();
+        },
+      );
+
+      resize.addEventListener(
+        "mousedown",
+        (event) => {
+          if (
+            event.button !== 0 ||
+            mode !== "select"
+          ) {
+            return;
+          }
+
+          event.stopPropagation();
+
+          selectNode(
+            node.id,
+            event.shiftKey,
+          );
+
+          const point =
+            worldPoint(event);
+
+          resizing = {
+            id: node.id,
+
+            startX: point.x,
+            startY: point.y,
+
+            width: size.width,
+            height: size.height,
+          };
+
+          event.preventDefault();
+        },
+      );
+
+      nodesEl.appendChild(
+        nodeEl,
+      );
+    }
+
+    count.textContent =
+      `${canvasData.nodes.length} ${
+        canvasData.nodes.length ===
+        1
+          ? "node"
+          : "nodes"
+      }`;
+
+    groupCount.textContent =
+      `${canvasData.groups.length} ${
+        canvasData.groups.length ===
+        1
+          ? "group"
+          : "groups"
+      }`;
+
+    updateSelectionUI();
+
+    empty.hidden =
+      canvasData.nodes.length !==
+        0 ||
+      canvasData.groups.length !==
+        0;
+  }
+
+  function render() {
+    renderGroups();
+    renderNodes();
+    renderEdges();
+    updateViewTransform();
+  }
+
+  function syncEditor() {
+    editor.value =
+      JSON.stringify(
+        canvasData,
+        null,
+        2,
+      );
+
+    setStatus(
+      "Updated",
+    );
+  }
+
+  function parseEditor() {
+    try {
+      const value =
+        JSON.parse(
+          editor.value,
+        );
+
+      canvasData =
+        jsonToCanvas(value);
+
+      clearSelection();
+
+      connectingNode = null;
+      connectionDrag = null;
+      connectionTarget = null;
+      hoverGroupId = null;
+
+      render();
+
+      setStatus(
+        "Valid",
+      );
+
+      error.hidden = true;
+    } catch (err) {
+      error.hidden =
+        false;
+
+      error.textContent =
+        err instanceof Error
+          ? err.message
+          : "Invalid JSON.";
+
+      setStatus(
+        "Invalid JSON",
+        false,
+      );
+    }
+  }
+
+  function deleteNodes(ids) {
+    canvasData.nodes =
+      canvasData.nodes.filter(
+        (node) =>
+          !ids.has(node.id),
+      );
+
+    canvasData.edges =
+      canvasData.edges.filter(
+        (edge) =>
+          !ids.has(
+            edge.fromNode,
+          ) &&
+          !ids.has(
+            edge.toNode,
+          ),
+      );
+
+    ids.forEach(
+      (id) => {
+        selectedNodes.delete(
+          id,
+        );
+      },
+    );
+
+    syncEditor();
+    render();
+    saveHistory();
+  }
+
+  function addEdge(
+    fromNode,
+    toNode,
+    fromSide = "right",
+    toSide = "left",
+  ) {
+    const from =
+      canvasData.nodes.find(
+        (node) =>
+          node.id ===
+          fromNode,
+      );
+
+    canvasData.edges.push({
+      id: uid("edge"),
+      fromNode,
+      toNode,
+      fromSide,
+      toSide,
+      color:
+        from?.color ||
+        "#52525b",
+      width: 2,
+      style: "solid",
+      end: "arrow",
+    });
+
+    syncEditor();
+    renderEdges();
+    saveHistory();
+  }
+
+  function addNode() {
+    const rect =
+      canvas.getBoundingClientRect();
+
+    const point = {
+      x:
+        (rect.width / 2 -
+          offsetX) /
+          zoom -
+        140,
+
+      y:
+        (rect.height / 2 -
+          offsetY) /
+          zoom -
+        70,
+    };
+
+    const node = {
+      id: uid(),
+      header: "New Node",
+      text: "New node",
+      x: point.x,
+      y: point.y,
+      color:
+        colors[
+          canvasData.nodes.length %
+            colors.length
+        ],
+      borderColor: "#2c2c32",
+      borderWidth: 1,
+      radius: 10,
+    };
+
+    canvasData.nodes.push(
+      node,
+    );
+
+    clearSelection();
+
+    selectedNodes.add(
+      node.id,
+    );
+
+    syncEditor();
+    render();
+    saveHistory();
+  }
+
+  function createGroupFromSelection() {
+    if (
+      selectedNodes.size ===
+      0
+    ) {
+      addGroup();
+      return;
+    }
+
+    const selected =
+      canvasData.nodes.filter(
+        (node) =>
+          selectedNodes.has(
+            node.id,
+          ),
+      );
+
+    if (!selected.length) {
+      return;
+    }
+
+    const padding = 34;
+
+    const bounds =
+      selected.reduce(
+        (
+          result,
+          node,
+        ) => {
+          const size =
+            getNodeSize(
+              node,
+            );
+
+          result.minX =
+            Math.min(
+              result.minX,
+              node.x,
+            );
+
+          result.minY =
+            Math.min(
+              result.minY,
+              node.y,
+            );
+
+          result.maxX =
+            Math.max(
+              result.maxX,
+              node.x +
+                size.width,
+            );
+
+          result.maxY =
+            Math.max(
+              result.maxY,
+              node.y +
+                size.height,
+            );
+
+          return result;
+        },
+        {
+          minX: Infinity,
+          minY: Infinity,
+          maxX: -Infinity,
+          maxY: -Infinity,
+        },
+      );
+
+    const group = {
+      id: uid("group"),
+      label: "Group",
+
+      x:
+        bounds.minX -
+        padding,
+
+      y:
+        bounds.minY -
+        padding -
+        30,
+
+      width:
+        bounds.maxX -
+        bounds.minX +
+        padding * 2,
+
+      height:
+        bounds.maxY -
+        bounds.minY +
+        padding * 2 +
+        30,
+
+      color:
+        colors[
+          canvasData.groups.length %
+            colors.length
+        ],
+    };
+
+    canvasData.groups.push(
+      group,
+    );
+
+    selected.forEach(
+      (node) => {
+        node.groupId =
+          group.id;
+      },
+    );
+
+    clearSelection();
+
+    selectedGroups.add(
+      group.id,
+    );
+
+    syncEditor();
+    render();
+    saveHistory();
+  }
+
+  function addGroup() {
+    const rect =
+      canvas.getBoundingClientRect();
+
+    const point = {
+      x:
+        (rect.width / 2 -
+          offsetX) /
+          zoom -
+        250,
+
+      y:
+        (rect.height / 2 -
+          offsetY) /
+          zoom -
+        170,
+    };
+
+    const group = {
+      id: uid("group"),
+      label: "New Group",
+      x: point.x,
+      y: point.y,
+      width: 500,
+      height: 340,
+      color:
+        colors[
+          canvasData.groups.length %
+            colors.length
+        ],
+    };
+
+    canvasData.groups.push(
+      group,
+    );
+
+    clearSelection();
+
+    selectedGroups.add(
+      group.id,
+    );
+
+    syncEditor();
+    render();
+    saveHistory();
+  }
+
+  function ungroupSelected() {
+    if (
+      selectedGroups.size ===
+      0
+    ) {
+      return;
+    }
+
+    const ids =
+      new Set(
+        selectedGroups,
+      );
+
+    canvasData.nodes.forEach(
+      (node) => {
+        if (
+          node.groupId &&
+          ids.has(
+            node.groupId,
+          )
+        ) {
+          delete node.groupId;
+        }
+      },
+    );
+
+    canvasData.groups =
+      canvasData.groups.filter(
+        (group) =>
+          !ids.has(
+            group.id,
+          ),
+      );
+
+    clearSelection();
+
+    syncEditor();
+    render();
+    saveHistory();
+  }
+
+  function assignNodeToGroup(
+    node,
+  ) {
+    const size =
+      getNodeSize(node);
+
+    const centerX =
+      node.x +
+      size.width / 2;
+
+    const centerY =
+      node.y +
+      size.height / 2;
+
+    const group =
+      getGroupAtPoint(
+        centerX,
+        centerY,
+      );
+
+    if (group) {
+      node.groupId =
+        group.id;
+
+      return group.id;
+    }
+
+    delete node.groupId;
+
+    return null;
+  }
+
+  function setMode(
+    nextMode,
+  ) {
+    cancelConnectionDrag();
+
+    mode = nextMode;
+
+    connectingNode = null;
+
+    selectButton.classList.toggle(
+      "active",
+      mode === "select",
+    );
+
+    panButton.classList.toggle(
+      "active",
+      mode === "pan",
+    );
+
+    connectButton.classList.toggle(
+      "active",
+      mode === "connect",
+    );
+
+    modeLabel.textContent =
+      mode === "select"
+        ? "Select"
+        : mode === "pan"
+          ? "Pan"
+          : "Connect";
+
+    renderNodes();
+  }
+
+  function zoomAt(
+    nextZoom,
+    clientX,
+    clientY,
+  ) {
+    const rect =
+      canvas.getBoundingClientRect();
+
+    const beforeX =
+      (clientX -
+        rect.left -
+        offsetX) /
+      zoom;
+
+    const beforeY =
+      (clientY -
+        rect.top -
+        offsetY) /
+      zoom;
+
+    zoom = clamp(
+      nextZoom,
+      0.2,
+      3,
+    );
+
+    offsetX =
+      clientX -
+      rect.left -
+      beforeX * zoom;
+
+    offsetY =
+      clientY -
+      rect.top -
+      beforeY * zoom;
+
+    updateViewTransform();
+  }
+
+  function fit() {
+    const objects = [
+      ...canvasData.nodes.map(
+        (node) => {
+          const size =
+            getNodeSize(
+              node,
+            );
+
+          return {
+            x: node.x,
+            y: node.y,
+            width:
+              size.width,
+            height:
+              size.height,
+          };
+        },
+      ),
+
+      ...canvasData.groups.map(
+        (group) => ({
+          x: group.x,
+          y: group.y,
+          width:
+            group.width,
+          height:
+            group.height,
+        }),
+      ),
+    ];
+
+    if (!objects.length) {
+      zoom = 1;
+      offsetX = 0;
+      offsetY = 0;
+
+      updateViewTransform();
+
+      return;
+    }
+
+    const padding = 90;
+
+    const minX =
+      Math.min(
+        ...objects.map(
+          (item) =>
+            item.x,
+        ),
+      );
+
+    const minY =
+      Math.min(
+        ...objects.map(
+          (item) =>
+            item.y,
+        ),
+      );
+
+    const maxX =
+      Math.max(
+        ...objects.map(
+          (item) =>
+            item.x +
+            item.width,
+        ),
+      );
+
+    const maxY =
+      Math.max(
+        ...objects.map(
+          (item) =>
+            item.y +
+            item.height,
+        ),
+      );
+
+    const width =
+      Math.max(
+        1,
+        maxX - minX,
+      );
+
+    const height =
+      Math.max(
+        1,
+        maxY - minY,
+      );
+
+    const availableWidth =
+      canvas.clientWidth -
+      padding * 2;
+
+    const availableHeight =
+      canvas.clientHeight -
+      padding * 2;
+
+    zoom = clamp(
+      Math.min(
+        availableWidth /
+          width,
+        availableHeight /
+          height,
+      ),
+      0.2,
+      1.5,
+    );
+
+    offsetX =
+      (canvas.clientWidth -
+        width * zoom) /
+        2 -
+      minX * zoom;
+
+    offsetY =
+      (canvas.clientHeight -
+        height * zoom) /
+        2 -
+      minY * zoom;
+
+    updateViewTransform();
+  }
+
+  function createExportSvg() {
+    const objects = [
+      ...canvasData.nodes.map(
+        (node) => {
+          const size =
+            getNodeSize(
+              node,
+            );
+
+          return {
+            x: node.x,
+            y: node.y,
+            width:
+              size.width,
+            height:
+              size.height,
+          };
+        },
+      ),
+
+      ...canvasData.groups.map(
+        (group) => ({
+          x: group.x,
+          y: group.y,
+          width:
+            group.width,
+          height:
+            group.height,
+        }),
+      ),
+    ];
+
+    const padding = 100;
+
+    const minX =
+      objects.length
+        ? Math.min(
+            ...objects.map(
+              (item) =>
+                item.x,
+            ),
+          )
+        : 0;
+
+    const minY =
+      objects.length
+        ? Math.min(
+            ...objects.map(
+              (item) =>
+                item.y,
+            ),
+          )
+        : 0;
+
+    const maxX =
+      objects.length
+        ? Math.max(
+            ...objects.map(
+              (item) =>
+                item.x +
+                item.width,
+            ),
+          )
+        : 1200;
+
+    const maxY =
+      objects.length
+        ? Math.max(
+            ...objects.map(
+              (item) =>
+                item.y +
+                item.height,
+            ),
+          )
+        : 800;
+
+    const width =
+      Math.max(
+        400,
+        maxX -
+          minX +
+          padding * 2,
+      );
+
+    const height =
+      Math.max(
+        300,
+        maxY -
+          minY +
+          padding * 2,
+      );
+
+    const nodeMap =
+      new Map(
+        canvasData.nodes.map(
+          (node) => [
+            node.id,
+            node,
+          ],
+        ),
+      );
+
+    const edgeSvg =
+      canvasData.edges
+        .map(
+          (edge) => {
+            const from =
+              nodeMap.get(
+                edge.fromNode,
+              );
+
+            const to =
+              nodeMap.get(
+                edge.toNode,
+              );
+
+            if (
+              !from ||
+              !to
+            ) {
+              return "";
+            }
+
+            const fromSide =
+              normalizeSide(
+                edge.fromSide,
+                "right",
+              );
+
+            const toSide =
+              normalizeSide(
+                edge.toSide,
+                "left",
+              );
+
+            const fromPoint =
+              getNodeConnectionPoint(
+                from,
+                fromSide,
+              );
+
+            const toPoint =
+              getNodeConnectionPoint(
+                to,
+                toSide,
+              );
+
+            const start = {
+              x:
+                fromPoint.x -
+                minX +
+                padding,
+
+              y:
+                fromPoint.y -
+                minY +
+                padding,
+            };
+
+            const end = {
+              x:
+                toPoint.x -
+                minX +
+                padding,
+
+              y:
+                toPoint.y -
+                minY +
+                padding,
+            };
+
+            const controls =
+              getConnectionControlPoints(
+                start,
+                end,
+                fromSide,
+                toSide,
+              );
+
+            const dash =
+              edge.style ===
+              "dashed"
+                ? 'stroke-dasharray="8 6"'
+                : edge.style ===
+                    "dotted"
+                  ? 'stroke-dasharray="2 6"'
+                  : "";
+
+            const marker =
+              edge.end ===
+              "circle"
+                ? 'marker-end="url(#circle-end)"'
+                : edge.end ===
+                    "arrow"
+                  ? 'marker-end="url(#arrow)"'
+                  : "";
+
+            return `
+          <path
+            d="M ${start.x} ${start.y}
+               C ${controls.c1.x} ${controls.c1.y},
+                 ${controls.c2.x} ${controls.c2.y},
+                 ${end.x} ${end.y}"
+            fill="none"
+            stroke="${escapeXml(
+              edge.color ||
+                "#52525b",
+            )}"
+            stroke-width="${Math.max(
+              1,
+              Number(
+                edge.width ??
+                  2,
+              ),
+            )}"
+            ${dash}
+            ${marker}
+          />
+        `;
+          },
+        )
+        .join("");
+
+    const groupSvg =
+      canvasData.groups
+        .map(
+          (group) => {
+            const x =
+              group.x -
+              minX +
+              padding;
+
+            const y =
+              group.y -
+              minY +
+              padding;
+
+            return `
+              <rect
+                x="${x}"
+                y="${y}"
+                width="${group.width}"
+                height="${group.height}"
+                rx="12"
+                fill="#111113"
+                fill-opacity="0.32"
+                stroke="${escapeXml(
+                  group.color,
+                )}"
+                stroke-opacity="0.35"
+              />
+
+              <rect
+                x="${x}"
+                y="${y}"
+                width="${group.width}"
+                height="38"
+                rx="12"
+                fill="${escapeXml(
+                  group.color,
+                )}"
+                fill-opacity="0.06"
+              />
+
+              <circle
+                cx="${x + 16}"
+                cy="${y + 19}"
+                r="4"
+                fill="${escapeXml(
+                  group.color,
+                )}"
+              />
+
+              <text
+                x="${x + 28}"
+                y="${y + 23}"
+                fill="#a1a1aa"
+                font-size="12"
+                font-weight="600"
+                font-family="Inter, system-ui, sans-serif"
+              >${escapeXml(
+                group.label,
+              )}</text>
+            `;
+          },
+        )
+        .join("");
+
+    const nodeSvg =
+      canvasData.nodes
+        .map(
+          (node) => {
+            const size =
+              getNodeSize(
+                node,
+              );
+
+            const x =
+              node.x -
+              minX +
+              padding;
+
+            const y =
+              node.y -
+              minY +
+              padding;
+
+            const color =
+              node.color ||
+              "#8b5cf6";
+
+            const radius =
+              clamp(
+                Number(
+                  node.radius ??
+                    10,
+                ),
+                0,
+                30,
+              );
+
+            const borderWidth =
+              clamp(
+                Number(
+                  node.borderWidth ??
+                    1,
+                ),
+                0,
+                6,
+              );
+
+            const lines =
+              String(
+                node.text ??
+                  "",
+              )
+                .replace(
+                  /\r/g,
+                  "",
+                )
+                .split(
+                  "\n",
+                )
+                .slice(
+                  0,
+                  14,
+                );
+
+            const lineSvg =
+              lines
+                .map(
+                  (
+                    line,
+                    index,
+                  ) => `
+                  <text
+                    x="${x + 18}"
+                    y="${
+                      y +
+                      62 +
+                      index *
+                        22
+                    }"
+                    fill="#fafafa"
+                    font-size="13"
+                    font-family="Inter, system-ui, sans-serif"
+                  >${escapeXml(
+                    line,
+                  )}</text>
+                `,
+                )
+                .join("");
+
+            return `
+            <rect
+              x="${x}"
+              y="${y}"
+              width="${size.width}"
+              height="${size.height}"
+              rx="${radius}"
+              fill="#111113"
+              stroke="${escapeXml(
+                node.borderColor ||
+                  "#2c2c32",
+              )}"
+              stroke-width="${borderWidth}"
+            />
+
+            <rect
+              x="${x}"
+              y="${y}"
+              width="${size.width}"
+              height="3"
+              rx="${Math.min(
+                radius,
+                3,
+              )}"
+              fill="${escapeXml(
+                color,
+              )}"
+            />
+
+            <line
+              x1="${x}"
+              y1="${y + 38}"
+              x2="${
+                x +
+                size.width
+              }"
+              y2="${y + 38}"
+              stroke="#27272a"
+            />
+
+            <circle
+              cx="${x + 15}"
+              cy="${y + 19}"
+              r="4"
+              fill="${escapeXml(
+                color,
+              )}"
+            />
+
+            <text
+              x="${x + 27}"
+              y="${y + 23}"
+              fill="#fafafa"
+              font-size="12"
+              font-weight="600"
+              font-family="Inter, system-ui, sans-serif"
+            >${escapeXml(
+              node.header ||
+                "Node",
+            )}</text>
+
+            ${lineSvg}
+          `;
+          },
+        )
+        .join("");
+
+    return `
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="${width}"
+        height="${height}"
+        viewBox="0 0 ${width} ${height}"
+      >
+        <defs>
+          <marker
+            id="arrow"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="6"
+            markerHeight="6"
+            orient="auto"
+          >
+            <path
+              d="M 0 0 L 10 5 L 0 10 z"
+              fill="context-stroke"
+            />
+          </marker>
+
+          <marker
+            id="circle-end"
+            viewBox="0 0 10 10"
+            refX="5"
+            refY="5"
+            markerWidth="6"
+            markerHeight="6"
+            orient="auto"
+          >
+            <circle
+              cx="5"
+              cy="5"
+              r="3"
+              fill="context-stroke"
+            />
+          </marker>
+        </defs>
+
+        <rect
+          width="${width}"
+          height="${height}"
+          fill="#09090b"
+        />
+
+        ${groupSvg}
+        ${edgeSvg}
+        ${nodeSvg}
+      </svg>
+    `;
+  }
+
+  function download(
+    blob,
+    filename,
+  ) {
+    const url =
+      URL.createObjectURL(
+        blob,
+      );
+
+    const link =
+      document.createElement(
+        "a",
+      );
+
+    link.href = url;
+    link.download =
+      filename;
+
+    document.body.appendChild(
+      link,
+    );
+
+    link.click();
+    link.remove();
+
+    setTimeout(
+      () =>
+        URL.revokeObjectURL(
+          url,
+        ),
+      1000,
+    );
+  }
+
+  function exportSvg() {
+    download(
+      new Blob(
+        [
+          createExportSvg(),
+        ],
+        {
+          type: "image/svg+xml;charset=utf-8",
+        },
+      ),
+      "canvas.svg",
+    );
+  }
+
+  function exportCanvas() {
+    download(
+      new Blob(
+        [
+          JSON.stringify(
+            canvasData,
+            null,
+            2,
+          ),
+        ],
+        {
+          type: "application/json",
+        },
+      ),
+      "canvas.canvas",
+    );
+  }
+
+  function exportPng() {
+    const svg =
+      createExportSvg();
+
+    const blob =
+      new Blob(
+        [svg],
+        {
+          type: "image/svg+xml;charset=utf-8",
+        },
+      );
+
+    const url =
+      URL.createObjectURL(
+        blob,
+      );
+
+    const image =
+      new Image();
+
+    image.onload = () => {
+      const scale = 2;
+
+      const output =
+        document.createElement(
+          "canvas",
+        );
+
+      output.width =
+        image.width *
+        scale;
+
+      output.height =
+        image.height *
+        scale;
+
+      const context =
+        output.getContext(
+          "2d",
+        );
+
+      if (!context) {
+        URL.revokeObjectURL(
+          url,
+        );
+
+        return;
+      }
+
+      context.scale(
+        scale,
+        scale,
+      );
+
+      context.drawImage(
+        image,
+        0,
+        0,
+      );
+
+      output.toBlob(
+        (png) => {
+          if (png) {
+            download(
+              png,
+              "canvas.png",
+            );
+          }
+
+          URL.revokeObjectURL(
+            url,
+          );
+        },
+        "image/png",
+      );
+    };
+
+    image.src = url;
+  }
+
+  function exportFile(type) {
+    if (
+      type ===
+      "canvas"
+    ) {
+      exportCanvas();
+    }
+
+    if (
+      type ===
+      "svg"
+    ) {
+      exportSvg();
+    }
+
+    if (
+      type ===
+      "png"
+    ) {
+      exportPng();
+    }
+
+    exportMenu.hidden =
+      true;
+
+    exportButton.setAttribute(
+      "aria-expanded",
+      "false",
+    );
+  }
+
+  editor.addEventListener(
+    "input",
+    parseEditor,
+  );
+
+  editor.addEventListener(
+    "keydown",
+    (event) => {
+      if (
+        event.key ===
+        "Tab"
+      ) {
+        event.preventDefault();
+
+        const start =
+          editor.selectionStart;
+
+        const end =
+          editor.selectionEnd;
+
+        editor.setRangeText(
+          "  ",
+          start,
+          end,
+          "end",
+        );
+
+        parseEditor();
+      }
+    },
+  );
+
+  formatButton.addEventListener(
+    "click",
+    () => {
+      try {
+        const value =
+          JSON.parse(
+            editor.value,
+          );
+
+        editor.value =
+          JSON.stringify(
+            value,
+            null,
+            2,
+          );
+
+        parseEditor();
+      } catch {
+        parseEditor();
+      }
+    },
+  );
+
+  resetButton.addEventListener(
+    "click",
+    () => {
+      editor.value =
+        defaultJson;
+
+      offsetX = 0;
+      offsetY = 0;
+      zoom = 1;
+
+      clearSelection();
+
+      parseEditor();
+      saveHistory();
+    },
+  );
+
+  importButton.addEventListener(
+    "click",
+    () => {
+      fileInput.click();
+    },
+  );
+
+  fileInput.addEventListener(
+    "change",
+    () => {
+      const file =
+        fileInput.files?.[0];
+
+      if (!file) {
+        return;
+      }
+
+      const reader =
+        new FileReader();
+
+      reader.onload = () => {
+        try {
+          const value =
+            JSON.parse(
+              String(
+                reader.result ??
+                  "",
+              ),
+            );
+
+          canvasData =
+            normalizeCanvas(
+              value,
+            );
+
+          clearSelection();
+
+          connectingNode =
+            null;
+
+          connectionDrag =
+            null;
+
+          connectionTarget =
+            null;
+
+          hoverGroupId =
+            null;
+
+          offsetX = 0;
+          offsetY = 0;
+          zoom = 1;
+
+          editor.value =
+            JSON.stringify(
+              canvasData,
+              null,
+              2,
+            );
+
+          render();
+          fit();
+
+          setStatus(
+            "Imported",
+          );
+
+          error.hidden =
+            true;
+
+          saveHistory();
+        } catch (err) {
+          error.hidden =
+            false;
+
+          error.textContent =
+            err instanceof Error
+              ? err.message
+              : "Could not import file.";
+
+          setStatus(
+            "Import failed",
+            false,
+          );
+        }
+      };
+
+      reader.readAsText(file);
+      fileInput.value = "";
+    },
+  );
+
+  exportButton.addEventListener(
+    "click",
+    (event) => {
+      event.stopPropagation();
+
+      exportMenu.hidden =
+        !exportMenu.hidden;
+
+      exportButton.setAttribute(
+        "aria-expanded",
+        String(
+          !exportMenu.hidden,
+        ),
+      );
+    },
+  );
+
+  exportMenu
+    .querySelectorAll(
+      "[data-export]",
+    )
+    .forEach(
+      (button) => {
+        button.addEventListener(
+          "click",
+          (event) => {
+            event.stopPropagation();
+
+            const type =
+              button.getAttribute(
+                "data-export",
+              );
+
+            if (type) {
+              exportFile(
+                type,
+              );
+            }
+          },
+        );
+      },
+    );
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (
+        !(
+          event.target instanceof
+          Node
+        )
+      ) {
+        return;
+      }
+
+      if (
+        !exportButton.contains(
+          event.target,
+        ) &&
+        !exportMenu.contains(
+          event.target,
+        )
+      ) {
+        exportMenu.hidden =
+          true;
+
+        exportButton.setAttribute(
+          "aria-expanded",
+          "false",
+        );
+      }
+    },
+  );
+
+  editorCollapseButton.addEventListener(
+    "click",
+    () => {
+      editorCollapsed =
+        !editorCollapsed;
+
+      document
+        .querySelector(
+          ".workspace",
+        )
+        ?.classList.toggle(
+          "editor-collapsed",
+          editorCollapsed,
+        );
+    },
+  );
+
+  selectButton.addEventListener(
+    "click",
+    () =>
+      setMode(
+        "select",
+      ),
+  );
+
+  panButton.addEventListener(
+    "click",
+    () =>
+      setMode(
+        "pan",
+      ),
+  );
+
+  connectButton.addEventListener(
+    "click",
+    () =>
+      setMode(
+        "connect",
+      ),
+  );
+
+  addButton.addEventListener(
+    "click",
+    addNode,
+  );
+
+  addGroupButton.addEventListener(
+    "click",
+    createGroupFromSelection,
+  );
+
+  ungroupButton.addEventListener(
+    "click",
+    ungroupSelected,
+  );
+
+  fitButton.addEventListener(
+    "click",
+    fit,
+  );
+
+  zoomOutButton.addEventListener(
+    "click",
+    () => {
+      const rect =
+        canvas.getBoundingClientRect();
+
+      zoomAt(
+        zoom - 0.1,
+        rect.left +
+          rect.width /
+            2,
+        rect.top +
+          rect.height /
+            2,
+      );
+    },
+  );
+
+  zoomInButton.addEventListener(
+    "click",
+    () => {
+      const rect =
+        canvas.getBoundingClientRect();
+
+      zoomAt(
+        zoom + 0.1,
+        rect.left +
+          rect.width /
+            2,
+        rect.top +
+          rect.height /
+            2,
+      );
+    },
+  );
+
+  zoomResetButton.addEventListener(
+    "click",
+    () => {
+      const rect =
+        canvas.getBoundingClientRect();
+
+      zoomAt(
+        1,
+        rect.left +
+          rect.width /
+            2,
+        rect.top +
+          rect.height /
+            2,
+      );
+    },
+  );
+
+  canvas.addEventListener(
+    "mousedown",
+    (event) => {
+      if (
+        event.button ===
+          1 ||
+        event.shiftKey ||
+        mode === "pan"
+      ) {
+        panning = {
+          startX:
+            event.clientX,
+
+          startY:
+            event.clientY,
+
+          offsetX,
+          offsetY,
+        };
+
+        canvas.classList.add(
+          "panning",
+        );
+
+        event.preventDefault();
+
+        return;
+      }
+
+      if (
+        event.button !==
+        0
+      ) {
+        return;
+      }
+
+      if (
+        mode ===
+        "connect"
+      ) {
+        connectingNode =
+          null;
+
+        renderNodes();
+
+        return;
+      }
+
+      const target =
+        event.target;
+
+      if (
+        target instanceof
+          Element &&
+        target.closest(
+          ".node, .group-header",
+        )
+      ) {
+        return;
+      }
+
+      if (
+        mode !==
+        "select"
+      ) {
+        return;
+      }
+
+      if (
+        !event.shiftKey
+      ) {
+        clearSelection();
+      }
+
+      const point =
+        worldPoint(event);
+
+      selection = {
+        startX:
+          point.x,
+
+        startY:
+          point.y,
+
+        currentX:
+          point.x,
+
+        currentY:
+          point.y,
+
+        additive:
+          event.shiftKey,
+      };
+
+      selectionBox.hidden =
+        false;
+
+      updateSelectionBox();
+
+      event.preventDefault();
+    },
+  );
+
+  canvas.addEventListener(
+    "auxclick",
+    (event) => {
+      if (
+        event.button ===
+        1
+      ) {
+        event.preventDefault();
+      }
+    },
+  );
+
+  canvas.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+
+      const factor =
+        event.deltaY <
+        0
+          ? 1.1
+          : 0.9;
+
+      zoomAt(
+        zoom * factor,
+        event.clientX,
+        event.clientY,
+      );
+    },
+    {
+      passive: false,
+    },
+  );
+
+  function updateSelectionBox() {
+    if (!selection) {
+      selectionBox.hidden =
+        true;
+
+      return;
+    }
+
+    const x =
+      Math.min(
+        selection.startX,
+        selection.currentX,
+      );
+
+    const y =
+      Math.min(
+        selection.startY,
+        selection.currentY,
+      );
+
+    const width =
+      Math.abs(
+        selection.currentX -
+          selection.startX,
+      );
+
+    const height =
+      Math.abs(
+        selection.currentY -
+          selection.startY,
+      );
+
+    selectionBox.style.left =
+      `${
+        x * zoom +
+        offsetX
+      }px`;
+
+    selectionBox.style.top =
+      `${
+        y * zoom +
+        offsetY
+      }px`;
+
+    selectionBox.style.width =
+      `${width * zoom}px`;
+
+    selectionBox.style.height =
+      `${height * zoom}px`;
+  }
+
+  function finishBoxSelection() {
+    if (!selection) {
+      return;
+    }
+
+    const minX =
+      Math.min(
+        selection.startX,
+        selection.currentX,
+      );
+
+    const minY =
+      Math.min(
+        selection.startY,
+        selection.currentY,
+      );
+
+    const maxX =
+      Math.max(
+        selection.startX,
+        selection.currentX,
+      );
+
+    const maxY =
+      Math.max(
+        selection.startY,
+        selection.currentY,
+      );
+
+    const isClick =
+      Math.abs(
+        selection.currentX -
+          selection.startX,
+      ) < 4 &&
+      Math.abs(
+        selection.currentY -
+          selection.startY,
+      ) < 4;
+
+    if (
+      !selection.additive
+    ) {
+      clearSelection();
+    }
+
+    if (!isClick) {
+      canvasData.nodes.forEach(
+        (node) => {
+          const size =
+            getNodeSize(
+              node,
+            );
+
+          const overlaps =
+            node.x <
+              maxX &&
+            node.x +
+              size.width >
+              minX &&
+            node.y <
+              maxY &&
+            node.y +
+              size.height >
+              minY;
+
+          if (overlaps) {
+            selectedNodes.add(
+              node.id,
+            );
+          }
+        },
+      );
+    }
+
+    selection = null;
+
+    selectionBox.hidden =
+      true;
+
+    renderNodes();
+  }
+
+  document.addEventListener(
+    "mousemove",
+    (event) => {
+      if (connectionDrag) {
+        const point =
+          worldPoint(event);
+
+        connectionDrag.lastPoint =
+          point;
+
+        const target =
+          getConnectionTarget(
+            event,
+          );
+
+        if (target) {
+          connectionDrag.targetSide =
+            getConnectionTargetSide(
+              target,
+              event,
+            );
+        } else {
+          connectionDrag.targetSide =
+            getOppositeSide(
+              connectionDrag.side,
+            );
+        }
+
+        updateConnectionTarget(
+          target,
+        );
+
+        renderConnectionPreview(
+          point,
+        );
+
+        return;
+      }
+
+      if (selection) {
+        const point =
+          worldPoint(event);
+
+        selection.currentX =
+          point.x;
+
+        selection.currentY =
+          point.y;
+
+        updateSelectionBox();
+
+        return;
+      }
+
+      if (dragging) {
+        const point =
+          worldPoint(event);
+
+        const dx =
+          point.x -
+          dragging.startX;
+
+        const dy =
+          point.y -
+          dragging.startY;
+
+        if (
+          dragging.type ===
+          "nodes"
+        ) {
+          for (
+            const item of
+              dragging.originalNodes
+          ) {
+            const node =
+              canvasData.nodes.find(
+                (
+                  candidate,
+                ) =>
+                  candidate.id ===
+                  item.id,
+              );
+
+            if (!node) {
+              continue;
+            }
+
+            node.x =
+              item.x + dx;
+
+            node.y =
+              item.y + dy;
+
+            const element =
+              document.querySelector(
+                `.node[data-id="${CSS.escape(
+                  node.id,
+                )}"]`,
+              );
+
+            if (element) {
+              element.style.left =
+                `${node.x}px`;
+
+              element.style.top =
+                `${node.y}px`;
+            }
+          }
+
+          const primary =
+            canvasData.nodes.find(
+              (node) =>
+                selectedNodes.has(
+                  node.id,
+                ),
+            );
+
+          if (primary) {
+            const size =
+              getNodeSize(
+                primary,
+              );
+
+            updateHoveredGroup(
+              {
+                x:
+                  primary.x +
+                  size.width /
+                    2,
+
+                y:
+                  primary.y +
+                  size.height /
+                    2,
+              },
+            );
+          }
+        }
+
+        if (
+          dragging.type ===
+          "group"
+        ) {
+          const group =
+            canvasData.groups.find(
+              (item) =>
+                item.id ===
+                dragging.id,
+            );
+
+          if (group) {
+            group.x =
+              dragging.groupX +
+              dx;
+
+            group.y =
+              dragging.groupY +
+              dy;
+
+            const groupElement =
+              document.querySelector(
+                `.canvas-group[data-id="${CSS.escape(
+                  group.id,
+                )}"]`,
+              );
+
+            if (
+              groupElement
+            ) {
+              groupElement.style.left =
+                `${group.x}px`;
+
+              groupElement.style.top =
+                `${group.y}px`;
+            }
+
+            for (
+              const item of
+                dragging.originalNodes
+            ) {
+              const node =
+                canvasData.nodes.find(
+                  (
+                    candidate,
+                  ) =>
+                    candidate.id ===
+                    item.id,
+                );
+
+              if (!node) {
+                continue;
+              }
+
+              node.x =
+                item.x + dx;
+
+              node.y =
+                item.y + dy;
+
+              const element =
+                document.querySelector(
+                  `.node[data-id="${CSS.escape(
+                    node.id,
+                  )}"]`,
+                );
+
+              if (element) {
+                element.style.left =
+                  `${node.x}px`;
+
+                element.style.top =
+                  `${node.y}px`;
+              }
+            }
+          }
+        }
+
+        renderEdges();
+
+        return;
+      }
+
+      if (resizing) {
+        const node =
+          canvasData.nodes.find(
+            (item) =>
+              item.id ===
+              resizing.id,
+          );
+
+        if (!node) {
+          return;
+        }
+
+        const point =
+          worldPoint(event);
+
+        node.width =
+          Math.max(
+            140,
+            resizing.width +
+              point.x -
+              resizing.startX,
+          );
+
+        node.height =
+          Math.max(
+            90,
+            resizing.height +
+              point.y -
+              resizing.startY,
+          );
+
+        const element =
+          document.querySelector(
+            `.node[data-id="${CSS.escape(
+              node.id,
+            )}"]`,
+          );
+
+        if (element) {
+          element.style.width =
+            `${node.width}px`;
+
+          element.style.height =
+            `${node.height}px`;
+        }
+
+        renderEdges();
+
+        return;
+      }
+
+      if (panning) {
+        offsetX =
+          panning.offsetX +
+          event.clientX -
+          panning.startX;
+
+        offsetY =
+          panning.offsetY +
+          event.clientY -
+          panning.startY;
+
+        updateViewTransform();
+      }
+    },
+  );
+
+  document.addEventListener(
+    "mouseup",
+    (event) => {
+      if (connectionDrag) {
+        finishConnectionDrag(
+          event,
+        );
+
+        return;
+      }
+
+      if (selection) {
+        finishBoxSelection();
+
+        return;
+      }
+
+      if (dragging) {
+        if (
+          dragging.type ===
+          "nodes"
+        ) {
+          for (
+            const id of
+              selectedNodes
+          ) {
+            const node =
+              canvasData.nodes.find(
+                (item) =>
+                  item.id === id,
+              );
+
+            if (node) {
+              assignNodeToGroup(
+                node,
+              );
+            }
+          }
+        }
+
+        syncEditor();
+        render();
+        saveHistory();
+
+        dragging = null;
+
+        hoverGroupId =
+          null;
+
+        return;
+      }
+
+      if (resizing) {
+        syncEditor();
+        render();
+        saveHistory();
+
+        resizing = null;
+
+        return;
+      }
+
+      if (panning) {
+        panning = null;
+
+        canvas.classList.remove(
+          "panning",
+        );
+      }
+    },
+  );
+
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (
+        document.activeElement ===
+        editor
+      ) {
+        return;
+      }
+
+      const modifier =
+        event.ctrlKey ||
+        event.metaKey;
+
+      if (
+        modifier &&
+        event.key.toLowerCase() ===
+          "z"
+      ) {
+        event.preventDefault();
+
+        if (event.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+
+        return;
+      }
+
+      if (
+        modifier &&
+        event.key.toLowerCase() ===
+          "y"
+      ) {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
+      if (
+        event.key ===
+          "Delete" ||
+        event.key ===
+          "Backspace"
+      ) {
+        if (
+          selectedNodes.size
+        ) {
+          deleteNodes(
+            new Set(
+              selectedNodes,
+            ),
+          );
+        }
+
+        if (
+          selectedGroups.size
+        ) {
+          const ids =
+            new Set(
+              selectedGroups,
+            );
+
+          canvasData.nodes.forEach(
+            (node) => {
+              if (
+                node.groupId &&
+                ids.has(
+                  node.groupId,
+                )
+              ) {
+                delete node.groupId;
+              }
+            },
+          );
+
+          canvasData.groups =
+            canvasData.groups.filter(
+              (group) =>
+                !ids.has(
+                  group.id,
+                ),
+            );
+
+          clearSelection();
+
+          syncEditor();
+          render();
+          saveHistory();
+        }
+      }
+
+      if (
+        event.key ===
+        "Escape"
+      ) {
+        if (connectionDrag) {
+          cancelConnectionDrag();
+          return;
+        }
+
+        connectingNode =
+          null;
+
+        setMode(
+          "select",
+        );
+      }
+    },
+  );
+
+  canvas.addEventListener(
+    "contextmenu",
+    (event) => {
+      event.preventDefault();
+    },
+  );
+
+  canvasData =
+    normalizeCanvas(
+      JSON.parse(
+        defaultJson,
+      ),
+    );
+
+  render();
+  saveHistory();
+</script>
+
+<style>
+  .canvas-page {
+    width: min(
+      1500px,
+      calc(100% - 48px)
+    );
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 4rem 0;
+  }
+
+  .header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .heading {
+    min-width: 0;
+  }
+
+  .back {
+    display: inline-block;
+    margin-bottom: 1.5rem;
+    color: var(--foreground-muted);
+    font-size: 0.85rem;
+    transition: color 0.15s ease;
+  }
+
+  .back:hover {
+    color: var(--foreground);
+  }
+
+  .eyebrow {
+    margin: 0 0 0.4rem;
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(
+      2rem,
+      4vw,
+      3rem
+    );
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+  }
+
+  .description {
+    max-width: 680px;
+    margin: 0.8rem 0 0;
+    color: var(--foreground-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .actions button,
+  .tool-text,
+  .zoom-controls button {
+    min-height: 34px;
+    padding: 0 0.8rem;
+
+    background: var(--background-secondary);
+    color: var(--foreground-muted);
+
+    border: 1px solid var(--border);
+    border-radius: 7px;
+
+    font-size: 0.8rem;
+    cursor: pointer;
+
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .actions button:hover,
+  .tool-text:hover,
+  .zoom-controls button:hover {
+    color: var(--foreground);
+    border-color: #3f3f46;
+  }
+
+  .actions .primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .actions .primary:hover {
+    opacity: 0.9;
+  }
+
+  .export {
+    position: relative;
+  }
+
+  .export-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .export-trigger span {
+    opacity: 0.7;
+    font-size: 0.9rem;
+  }
+
+  .export-menu {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 0.5rem);
+    right: 0;
+
+    width: 180px;
+    padding: 0.35rem;
+
+    background: var(--background-secondary);
+
+    border: 1px solid var(--border);
+    border-radius: 8px;
+
+    box-shadow:
+      0 18px 50px
+        rgba(
+          0,
+          0,
+          0,
+          0.35
+        );
+  }
+
+  .export-menu[hidden] {
+    display: none;
+  }
+
+  .export-menu button {
+    width: 100%;
+    min-height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 0.7rem;
+
+    background: transparent;
+    color: var(--foreground);
+
+    border: 0;
+    border-radius: 5px;
+
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .export-menu button:hover {
+    background: var(--background);
+  }
+
+  .export-menu button span {
+    color: var(--foreground-muted);
+    font-size: 0.68rem;
+  }
+
+  .workspace {
+    display: grid;
+
+    grid-template-columns:
+      minmax(300px, 0.72fr)
+      minmax(0, 1.7fr);
+
+    height: 720px;
+
+    overflow: hidden;
+
+    background: var(--background-secondary);
+
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .workspace.editor-collapsed {
+    grid-template-columns: 0 1fr;
+  }
+
+  .editor-panel {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+    overflow: hidden;
+
+    border-right: 1px solid var(--border);
+
+    transition:
+      opacity 0.15s ease;
+  }
+
+  .workspace.editor-collapsed
+    .editor-panel {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .panel-header {
+    height: 44px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    flex: 0 0 auto;
+
+    padding: 0 12px;
+
+    border-bottom: 1px solid var(--border);
+
+    color: var(--foreground-muted);
+
+    font-family:
+      "JetBrains Mono",
+      "SFMono-Regular",
+      Consolas,
+      monospace;
+
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .panel-dot {
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .panel-icon {
+    width: 26px;
+    height: 26px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+
+    background: transparent;
+    color: var(--foreground-muted);
+
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .panel-icon:hover {
+    background: #18181b;
+    color: var(--foreground);
+  }
+
+  #status[data-error="true"] {
+    color: #f87171;
+  }
+
+  #editor {
+    flex: 1;
+
+    width: 100%;
+    min-height: 0;
+
+    resize: none;
+
+    padding: 18px;
+
+    background:
+      linear-gradient(
+        to right,
+        rgba(
+          139,
+          92,
+          246,
+          0.025
+        ),
+        transparent 35%
+      );
+
+    color: var(--foreground);
+
+    border: 0;
+    outline: 0;
+
+    font-family:
+      "JetBrains Mono",
+      "SFMono-Regular",
+      Consolas,
+      monospace;
+
+    font-size: 0.78rem;
+    line-height: 1.75;
+
+    tab-size: 2;
+  }
+
+  #editor:focus {
+    outline: none;
+  }
+
+  .editor-footer {
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 12px;
+
+    border-top: 1px solid var(--border);
+
+    color: var(--foreground-muted);
+
+    font-family:
+      "JetBrains Mono",
+      "SFMono-Regular",
+      Consolas,
+      monospace;
+
+    font-size: 0.63rem;
+  }
+
+  .error {
+    position: absolute;
+
+    right: 12px;
+    bottom: 44px;
+    left: 12px;
+
+    padding: 10px 12px;
+
+    background: #181113;
+
+    border: 1px solid #4c2028;
+    border-radius: 7px;
+
+    color: #fca5a5;
+
+    font-family:
+      "JetBrains Mono",
+      "SFMono-Regular",
+      Consolas,
+      monospace;
+
+    font-size: 0.72rem;
+    line-height: 1.5;
+  }
+
+  .canvas-panel {
+    position: relative;
+
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+  }
+
+  .canvas-toolbar {
+    position: relative;
+    z-index: 20;
+
+    height: 44px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 10px;
+
+    background:
+      rgba(
+        15,
+        15,
+        18,
+        0.92
+      );
+
+    border-bottom: 1px solid var(--border);
+
+    backdrop-filter: blur(12px);
+  }
+
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tool {
+    width: 30px;
+    height: 30px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+
+    background: transparent;
+    color: var(--foreground-muted);
+
+    border: 1px solid transparent;
+    border-radius: 6px;
+
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .tool:hover {
+    background: #18181b;
+    color: var(--foreground);
+  }
+
+  .tool.active {
+    background: #1f1f23;
+    color: var(--foreground);
+    border-color: #2c2c32;
+  }
+
+  .separator {
+    width: 1px;
+    height: 18px;
+    margin: 0 5px;
+    background: var(--border);
+  }
+
+  .add-node {
+    height: 30px;
+
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 0 10px;
+
+    background: var(--foreground);
+    color: var(--background);
+
+    border: 1px solid var(--foreground);
+    border-radius: 6px;
+
+    font-size: 0.76rem;
+    font-weight: 600;
+
+    cursor: pointer;
+  }
+
+  .add-node span {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .add-node:hover {
+    opacity: 0.88;
+  }
+
+  .canvas-stats {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    color: var(--foreground-muted);
+
+    font-family:
+      "JetBrains Mono",
+      "SFMono-Regular",
+      Consolas,
+      monospace;
+
+    font-size: 0.65rem;
+  }
+
+  .canvas {
+    position: relative;
+
+    flex: 1;
+    min-height: 0;
+
+    overflow: hidden;
+
+    background-color: #09090b;
+
+    background-image:
+      radial-gradient(
+        circle,
+        rgba(
+          161,
+          161,
+          170,
+          0.16
+        ) 1px,
+        transparent 1px
+      );
+
+    background-size: 24px 24px;
+
+    cursor: default;
+
+    touch-action: none;
+  }
+
+  .canvas.panning {
+    cursor: grabbing;
+  }
+
+  .groups,
+  .nodes {
+    position: absolute;
+    inset: 0;
+
+    transform-origin: 0 0;
+  }
+
+  .groups {
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .nodes {
+    z-index: 3;
+  }
+
+  .edges {
+    position: absolute;
+    inset: 0;
+
+    z-index: 2;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: visible;
+
+    transform-origin: 0 0;
+
+    pointer-events: none;
+  }
+
+  :global(.edge-path) {
+    fill: none;
+    vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+  }
+
+  :global(.connection-preview) {
+    opacity: 0.9;
+    filter:
+      drop-shadow(
+        0 0 4px
+        color-mix(
+          in srgb,
+          var(--accent) 35%,
+          transparent
+        )
+      );
+  }
+
+  .selection-box {
+    position: absolute;
+    z-index: 10;
+
+    background:
+      color-mix(
+        in srgb,
+        var(--accent) 10%,
+        transparent
+      );
+
+    border:
+      1px solid
+      color-mix(
+        in srgb,
+        var(--accent) 75%,
+        transparent
+      );
+
+    pointer-events: none;
+  }
+
+  :global(.node) {
+    --node-color: #8b5cf6;
+
+    position: absolute;
+
+    min-width: 140px;
+    min-height: 90px;
+
+    overflow: hidden;
+
+    background:
+      linear-gradient(
+        145deg,
+        color-mix(
+          in srgb,
+          var(--node-color) 6%,
+          #111113
+        ),
+        #111113 55%
+      );
+
+    border-style: solid;
+
+    box-shadow:
+      0 10px 28px
+        rgba(
+          0,
+          0,
+          0,
+          0.25
+        ),
+      0 1px 2px
+        rgba(
+          0,
+          0,
+          0,
+          0.4
+        );
+
+    user-select: none;
+    cursor: grab;
+  }
+
+  :global(.node)::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    right: 0;
+
+    height: 2px;
+
+    background: var(--node-color);
+  }
+
+  :global(.node:hover) {
+    border-color: #3f3f46;
+
+    box-shadow:
+      0 12px 32px
+        rgba(
+          0,
+          0,
+          0,
+          0.3
+        );
+  }
+
+  :global(.node.selected) {
+    box-shadow:
+      0 0 0 1px
+        var(--node-color),
+      0 12px 32px
+        rgba(
+          0,
+          0,
+          0,
+          0.35
+        );
+  }
+
+  :global(.node.connecting) {
+    box-shadow:
+      0 0 0 1px
+        var(--node-color),
+      0 0 24px
+        color-mix(
+          in srgb,
+          var(--node-color) 25%,
+          transparent
+        );
+  }
+
+  :global(.node.connection-target) {
+    box-shadow:
+      0 0 0 2px
+        var(--node-color),
+      0 0 28px
+        color-mix(
+          in srgb,
+          var(--node-color) 30%,
+          transparent
+        );
+  }
+
+  :global(.node-header) {
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 7px 0 13px;
+
+    border-bottom: 1px solid #27272a;
+  }
+
+  :global(.node-header-left) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    min-width: 0;
+  }
+
+  :global(.node-color) {
+    width: 7px;
+    height: 7px;
+
+    flex: 0 0 auto;
+
+    border-radius: 50%;
+
+    box-shadow:
+      0 0 8px
+        color-mix(
+          in srgb,
+          var(--node-color) 45%,
+          transparent
+        );
+  }
+
+  :global(.node-header-title) {
+    overflow: hidden;
+
+    color: var(--foreground);
+
+    font-size: 0.76rem;
+    font-weight: 600;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.node-header-actions) {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  :global(.node-color-input) {
+    width: 22px;
+    height: 22px;
+
+    padding: 3px;
+
+    background: transparent;
+
+    border: 0;
+    border-radius: 5px;
+
+    cursor: pointer;
+  }
+
+  :global(.node-color-input:hover) {
+    background: #27272a;
+  }
+
+  :global(.node-color-input::-webkit-color-swatch-wrapper) {
+    padding: 0;
+  }
+
+  :global(.node-color-input::-webkit-color-swatch) {
+    border: 0;
+    border-radius: 50%;
+  }
+
+  :global(.node-delete) {
+    width: 22px;
+    height: 22px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+
+    background: transparent;
+    color: #71717a;
+
+    border-radius: 5px;
+
+    font-size: 1rem;
+    line-height: 1;
+
+    cursor: pointer;
+  }
+
+  :global(.node-delete:hover) {
+    background: #27272a;
+    color: #fafafa;
+  }
+
+  :global(.node-content) {
+    height: calc(
+      100% - 38px
+    );
+
+    overflow: auto;
+
+    padding: 14px;
+
+    color: var(--foreground-muted);
+
+    font-size: 0.84rem;
+    line-height: 1.6;
+
+    overflow-wrap: anywhere;
+
+    user-select: text;
+  }
+
+  :global(.node-content strong) {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  :global(.node-content code) {
+    padding: 2px 5px;
+
+    background: #18181b;
+
+    border: 1px solid #27272a;
+    border-radius: 4px;
+
+    color: var(--foreground);
+
+    font-family:
+      "JetBrains Mono",
+      "SFMono-Regular",
+      Consolas,
+      monospace;
+
+    font-size: 0.8em;
+  }
+
+  :global(.node-content a) {
+    color: var(--node-color);
+
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  :global(.file-node) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    color: var(--foreground);
+  }
+
+  :global(.file-icon) {
+    color: var(--foreground-muted);
+  }
+
+  :global(.node-handle) {
+    position: absolute;
+
+    width: 11px;
+    height: 11px;
+
+    background: #111113;
+
+    border: 2px solid var(--node-color);
+    border-radius: 50%;
+
+    opacity: 0;
+
+    transition:
+      opacity 0.12s ease,
+      border-color 0.12s ease,
+      transform 0.12s ease,
+      background 0.12s ease;
+
+    z-index: 5;
+
+    cursor: crosshair;
+  }
+
+  :global(.node-handle-left) {
+    left: -5.5px;
+    top: 50%;
+    margin-top: -5.5px;
+  }
+
+  :global(.node-handle-right) {
+    right: -5.5px;
+    top: 50%;
+    margin-top: -5.5px;
+  }
+
+  :global(.node-handle-top) {
+    top: -5.5px;
+    left: 50%;
+    margin-left: -5.5px;
+  }
+
+  :global(.node-handle-bottom) {
+    bottom: -5.5px;
+    left: 50%;
+    margin-left: -5.5px;
+  }
+
+  :global(.node:hover .node-handle),
+  :global(.node.selected .node-handle),
+  :global(.node.connecting .node-handle),
+  :global(.node.connection-target .node-handle) {
+    opacity: 1;
+  }
+
+  :global(.node-handle:hover) {
+    background: var(--node-color);
+    border-color: var(--node-color);
+    transform: scale(1.35);
+  }
+
+  :global(.resize) {
+    position: absolute;
+
+    right: 2px;
+    bottom: 2px;
+
+    width: 13px;
+    height: 13px;
+
+    cursor: nwse-resize;
+
+    opacity: 0;
+  }
+
+  :global(.node:hover .resize),
+  :global(.node.selected .resize) {
+    opacity: 1;
+  }
+
+  :global(.resize)::after {
+    content: "";
+
+    position: absolute;
+
+    right: 1px;
+    bottom: 1px;
+
+    width: 7px;
+    height: 7px;
+
+    border-right: 1px solid #71717a;
+    border-bottom: 1px solid #71717a;
+  }
+
+  :global(.canvas-group) {
+    --group-color: #8b5cf6;
+
+    position: absolute;
+
+    overflow: visible;
+
+    background:
+      linear-gradient(
+        145deg,
+        color-mix(
+          in srgb,
+          var(--group-color) 4%,
+          transparent
+        ),
+        transparent
+      );
+
+    border:
+      1px solid
+      color-mix(
+        in srgb,
+        var(--group-color) 30%,
+        #27272a
+      );
+
+    border-radius: 12px;
+
+    pointer-events: none;
+  }
+
+  :global(.group-header) {
+    position: absolute;
+
+    top: -1px;
+    left: -1px;
+
+    width: max-content;
+    min-width: 140px;
+    max-width: 260px;
+
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 0 8px 0 13px;
+
+    background:
+      color-mix(
+        in srgb,
+        var(--group-color) 7%,
+        #111113
+      );
+
+    border:
+      1px solid
+      color-mix(
+        in srgb,
+        var(--group-color) 30%,
+        #27272a
+      );
+
+    border-radius: 10px 10px 7px 7px;
+
+    pointer-events: auto;
+
+    cursor: grab;
+  }
+
+  :global(.canvas-group:hover .group-header) {
+    border-color:
+      color-mix(
+        in srgb,
+        var(--group-color) 65%,
+        #3f3f46
+      );
+  }
+
+  :global(.canvas-group.selected .group-header) {
+    border-color:
+      var(--group-color);
+
+    box-shadow:
+      0 0 0 1px
+        color-mix(
+          in srgb,
+          var(--group-color) 45%,
+          transparent
+        );
+  }
+
+  :global(.canvas-group.drop-target) {
+    border-color:
+      var(--group-color);
+
+    background:
+      color-mix(
+        in srgb,
+        var(--group-color) 7%,
+        transparent
+      );
+
+    box-shadow:
+      0 0 0 2px
+        color-mix(
+          in srgb,
+          var(--group-color) 25%,
+          transparent
+        );
+  }
+
+  :global(.group-color) {
+    width: 7px;
+    height: 7px;
+
+    flex: 0 0 auto;
+
+    border-radius: 50%;
+  }
+
+  :global(.group-label) {
+    flex: 1;
+
+    overflow: hidden;
+
+    color: var(--foreground);
+
+    font-size: 0.75rem;
+    font-weight: 600;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.group-delete) {
+    width: 22px;
+    height: 22px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+
+    background: transparent;
+    color: #71717a;
+
+    border-radius: 5px;
+
+    cursor: pointer;
+  }
+
+  :global(.group-delete:hover) {
+    background: #27272a;
+    color: var(--foreground);
+  }
+
+  .empty {
+    position: absolute;
+    inset: 0;
+
+    z-index: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+
+    gap: 7px;
+
+    color: var(--foreground-muted);
+
+    pointer-events: none;
+  }
+
+  .empty-icon {
+    display: grid;
+    place-items: center;
+
+    width: 42px;
+    height: 42px;
+
+    margin-bottom: 4px;
+
+    background: #111113;
+
+    border: 1px solid #27272a;
+    border-radius: 10px;
+
+    color: var(--foreground-muted);
+
+    font-size: 1.1rem;
+  }
+
+  .empty strong {
+    color: var(--foreground);
+    font-size: 0.9rem;
+  }
+
+  .empty span {
+    font-size: 0.75rem;
+  }
+
+  .canvas-footer {
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 10px;
+
+    background:
+      rgba(
+        15,
+        15,
+        18,
+        0.94
+      );
+
+    border-top: 1px solid var(--border);
+
+    color: var(--foreground-muted);
+
+    font-family:
+      "JetBrains Mono",
+      "SFMono-Regular",
+      Consolas,
+      monospace;
+
+    font-size: 0.65rem;
+
+    backdrop-filter: blur(12px);
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .footer-hint {
+    color: #52525b;
+  }
+
+  .zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .zoom-controls button {
+    min-width: 30px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+  }
+
+  #zoom-reset {
+    min-width: 52px;
+  }
+
+  :global(body.connecting-canvas),
+  :global(body.connecting-canvas *) {
+    cursor: crosshair !important;
+  }
+
+  @media (max-width: 1100px) {
+    .canvas-stats span:nth-child(3) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .canvas-page {
+      width: min(
+        100% - 24px,
+        1500px
+      );
+
+      padding: 2rem 0;
+    }
+
+    .header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .actions {
+      justify-content: flex-start;
+    }
+
+    .workspace {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+
+    .editor-panel {
+      height: 400px;
+
+      border-right: 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .canvas-panel {
+      height: 600px;
+    }
+
+    .footer-hint {
+      display: none;
+    }
+
+    .canvas-stats span:nth-child(2),
+    .canvas-stats span:nth-child(3) {
+      display: none;
+    }
+  }
+</style>
