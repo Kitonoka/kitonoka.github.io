@@ -38,6 +38,12 @@ Local JSON Web Token decoder for inspecting JWT headers, payloads, signatures, a
 
 [View project →](https://kitonoka.github.io/projects/jwt/)
 
+### Statistic
+
+Create clean, customizable charts and export them anywhere.
+
+[View project →](https://kitonoka.github.io/projects/statistic/)
+
 ### Regex Lab
 
 Client-side regular expression testing and debugging tool with match highlighting, capture groups, replacements, flags, and common regex presets.
