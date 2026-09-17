@@ -74,6 +74,12 @@ Client-side Markdown editor with live preview, GitHub-style Markdown rendering, 
 
 [View project →](https://kitonoka.github.io/projects/markdown-preview/)
 
+### Diff Viewer
+
+Client-side file comparison tool that highlights added and removed lines with a GitHub-style unified diff, line numbers, change markers, and file statistics.
+
+[View project →](https://kitonoka.github.io/projects/diff-viewer/)
+
 
 ## GitHub Projects
 
