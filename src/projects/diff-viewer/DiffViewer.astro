@@ -1,0 +1,1240 @@
+---
+---
+
+<main class="diff-viewer">
+    <header class="header">
+        <div class="heading">
+            <a class="back" href="/">← Kitonoka</a>
+
+            <p class="eyebrow">Project</p>
+
+            <h1>Diff Viewer</h1>
+
+            <p class="description">
+                Upload two files and compare their contents with a
+                GitHub-style line-by-line diff.
+            </p>
+        </div>
+
+        <div class="actions">
+            <button id="clear" type="button">
+                Clear
+            </button>
+        </div>
+    </header>
+
+    <section class="upload-grid" aria-label="Files">
+        <label class="file-card" for="file-a">
+            <span class="file-card-header">
+                <span>Original</span>
+
+                <span id="file-a-name" class="file-name">
+                    No file selected
+                </span>
+            </span>
+
+            <span class="drop-area" id="drop-a">
+                <span class="drop-icon">↑</span>
+
+                <strong id="drop-a-title">
+                    Choose original file
+                </strong>
+
+                <span id="drop-a-subtitle">
+                    or drag and drop it here
+                </span>
+            </span>
+
+            <input
+                id="file-a"
+                type="file"
+                aria-label="Choose original file"
+            />
+        </label>
+
+        <label class="file-card" for="file-b">
+            <span class="file-card-header">
+                <span>Modified</span>
+
+                <span id="file-b-name" class="file-name">
+                    No file selected
+                </span>
+            </span>
+
+            <span class="drop-area" id="drop-b">
+                <span class="drop-icon">↑</span>
+
+                <strong id="drop-b-title">
+                    Choose modified file
+                </strong>
+
+                <span id="drop-b-subtitle">
+                    or drag and drop it here
+                </span>
+            </span>
+
+            <input
+                id="file-b"
+                type="file"
+                aria-label="Choose modified file"
+            />
+        </label>
+    </section>
+
+    <section class="stats" aria-live="polite">
+        <div class="stat removed-stat">
+            <span id="removed-count">0</span>
+            <span>removed</span>
+        </div>
+
+        <div class="stat added-stat">
+            <span id="added-count">0</span>
+            <span>added</span>
+        </div>
+
+        <div class="stat">
+            <span id="unchanged-count">0</span>
+            <span>unchanged</span>
+        </div>
+
+        <div class="stat">
+            <span id="total-count">0</span>
+            <span>lines</span>
+        </div>
+    </section>
+
+    <section class="diff-container" aria-label="Diff">
+        <div class="diff-header">
+            <div class="diff-heading">
+                <span class="diff-title">Changes</span>
+
+                <span id="diff-subtitle" class="diff-subtitle">
+                    Select two files to compare
+                </span>
+            </div>
+
+            <span id="diff-status" class="status">
+                Waiting
+            </span>
+        </div>
+
+        <div id="diff" class="diff">
+            <div class="empty">
+                <span class="empty-icon">±</span>
+
+                <strong>No comparison yet</strong>
+
+                <span>
+                    Select two files to automatically compare them.
+                </span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+    type DiffType =
+        | "same"
+        | "added"
+        | "removed";
+
+    type DiffLine = {
+        type: DiffType;
+        oldLine: number | null;
+        newLine: number | null;
+        content: string;
+    };
+
+    const fileA =
+        document.querySelector("#file-a");
+
+    const fileB =
+        document.querySelector("#file-b");
+
+    const fileAName =
+        document.querySelector("#file-a-name");
+
+    const fileBName =
+        document.querySelector("#file-b-name");
+
+    const dropA =
+        document.querySelector("#drop-a");
+
+    const dropB =
+        document.querySelector("#drop-b");
+
+    const dropATitle =
+        document.querySelector("#drop-a-title");
+
+    const dropASubtitle =
+        document.querySelector("#drop-a-subtitle");
+
+    const dropBTitle =
+        document.querySelector("#drop-b-title");
+
+    const dropBSubtitle =
+        document.querySelector("#drop-b-subtitle");
+
+    const clearButton =
+        document.querySelector("#clear");
+
+    const diff =
+        document.querySelector("#diff");
+
+    const diffSubtitle =
+        document.querySelector("#diff-subtitle");
+
+    const diffStatus =
+        document.querySelector("#diff-status");
+
+    const removedCount =
+        document.querySelector("#removed-count");
+
+    const addedCount =
+        document.querySelector("#added-count");
+
+    const unchangedCount =
+        document.querySelector("#unchanged-count");
+
+    const totalCount =
+        document.querySelector("#total-count");
+
+    if (
+        !(fileA instanceof HTMLInputElement) ||
+        !(fileB instanceof HTMLInputElement) ||
+        !(fileAName instanceof HTMLElement) ||
+        !(fileBName instanceof HTMLElement) ||
+        !(dropA instanceof HTMLElement) ||
+        !(dropB instanceof HTMLElement) ||
+        !(dropATitle instanceof HTMLElement) ||
+        !(dropASubtitle instanceof HTMLElement) ||
+        !(dropBTitle instanceof HTMLElement) ||
+        !(dropBSubtitle instanceof HTMLElement) ||
+        !(clearButton instanceof HTMLButtonElement) ||
+        !(diff instanceof HTMLElement) ||
+        !(diffSubtitle instanceof HTMLElement) ||
+        !(diffStatus instanceof HTMLElement) ||
+        !(removedCount instanceof HTMLElement) ||
+        !(addedCount instanceof HTMLElement) ||
+        !(unchangedCount instanceof HTMLElement) ||
+        !(totalCount instanceof HTMLElement)
+    ) {
+        throw new Error(
+            "Diff Viewer failed to initialize."
+        );
+    }
+
+    let originalFile: File | null = null;
+    let modifiedFile: File | null = null;
+
+    const escapeHtml = (
+        value: string
+    ) => {
+        return value
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    };
+
+    const getLines = (
+        content: string
+    ) => {
+        return content
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n")
+            .split("\n");
+    };
+
+    const createDiff = (
+        oldLines: string[],
+        newLines: string[]
+    ): DiffLine[] => {
+        const rows =
+            oldLines.length + 1;
+
+        const columns =
+            newLines.length + 1;
+
+        const matrix: number[][] =
+            Array.from(
+                { length: rows },
+                () =>
+                    new Array(columns).fill(0)
+            );
+
+        for (
+            let oldIndex =
+                oldLines.length - 1;
+            oldIndex >= 0;
+            oldIndex--
+        ) {
+            for (
+                let newIndex =
+                    newLines.length - 1;
+                newIndex >= 0;
+                newIndex--
+            ) {
+                if (
+                    oldLines[oldIndex] ===
+                    newLines[newIndex]
+                ) {
+                    matrix[oldIndex][newIndex] =
+                        matrix[
+                            oldIndex + 1
+                        ][
+                            newIndex + 1
+                        ] + 1;
+                } else {
+                    matrix[oldIndex][newIndex] =
+                        Math.max(
+                            matrix[
+                                oldIndex + 1
+                            ][newIndex],
+                            matrix[
+                                oldIndex
+                            ][newIndex + 1]
+                        );
+                }
+            }
+        }
+
+        const result: DiffLine[] = [];
+
+        let oldIndex = 0;
+        let newIndex = 0;
+
+        let oldLine = 1;
+        let newLine = 1;
+
+        while (
+            oldIndex < oldLines.length &&
+            newIndex < newLines.length
+        ) {
+            if (
+                oldLines[oldIndex] ===
+                newLines[newIndex]
+            ) {
+                result.push({
+                    type: "same",
+                    oldLine,
+                    newLine,
+                    content:
+                        oldLines[oldIndex],
+                });
+
+                oldIndex++;
+                newIndex++;
+                oldLine++;
+                newLine++;
+
+                continue;
+            }
+
+            if (
+                matrix[
+                    oldIndex + 1
+                ][newIndex] >=
+                matrix[oldIndex][
+                    newIndex + 1
+                ]
+            ) {
+                result.push({
+                    type: "removed",
+                    oldLine,
+                    newLine: null,
+                    content:
+                        oldLines[oldIndex],
+                });
+
+                oldIndex++;
+                oldLine++;
+            } else {
+                result.push({
+                    type: "added",
+                    oldLine: null,
+                    newLine,
+                    content:
+                        newLines[newIndex],
+                });
+
+                newIndex++;
+                newLine++;
+            }
+        }
+
+        while (
+            oldIndex <
+            oldLines.length
+        ) {
+            result.push({
+                type: "removed",
+                oldLine,
+                newLine: null,
+                content:
+                    oldLines[oldIndex],
+            });
+
+            oldIndex++;
+            oldLine++;
+        }
+
+        while (
+            newIndex <
+            newLines.length
+        ) {
+            result.push({
+                type: "added",
+                oldLine: null,
+                newLine,
+                content:
+                    newLines[newIndex],
+            });
+
+            newIndex++;
+            newLine++;
+        }
+
+        return result;
+    };
+
+    const renderDiff = (
+        lines: DiffLine[],
+        oldName: string,
+        newName: string
+    ) => {
+        diff.innerHTML = lines
+            .map((line) => {
+                const marker =
+                    line.type === "added"
+                        ? "+"
+                        : line.type === "removed"
+                          ? "-"
+                          : "";
+
+                const oldNumber =
+                    line.oldLine === null
+                        ? ""
+                        : String(
+                              line.oldLine
+                          );
+
+                const newNumber =
+                    line.newLine === null
+                        ? ""
+                        : String(
+                              line.newLine
+                          );
+
+                return `
+                    <div class="diff-line ${line.type}">
+                        <span class="line-number">
+                            ${oldNumber}
+                        </span>
+
+                        <span class="line-number">
+                            ${newNumber}
+                        </span>
+
+                        <span class="line-marker">
+                            ${marker}
+                        </span>
+
+                        <code>${escapeHtml(
+                            line.content
+                        ) || " "}</code>
+                    </div>
+                `;
+            })
+            .join("");
+
+        const removed =
+            lines.filter(
+                (line) =>
+                    line.type ===
+                    "removed"
+            ).length;
+
+        const added =
+            lines.filter(
+                (line) =>
+                    line.type ===
+                    "added"
+            ).length;
+
+        const unchanged =
+            lines.filter(
+                (line) =>
+                    line.type ===
+                    "same"
+            ).length;
+
+        removedCount.textContent =
+            String(removed);
+
+        addedCount.textContent =
+            String(added);
+
+        unchangedCount.textContent =
+            String(unchanged);
+
+        totalCount.textContent =
+            String(lines.length);
+
+        diffSubtitle.textContent =
+            `${oldName} → ${newName}`;
+
+        if (
+            removed === 0 &&
+            added === 0
+        ) {
+            diffStatus.textContent =
+                "No changes";
+
+            diffStatus.classList.add(
+                "clean"
+            );
+        } else {
+            diffStatus.textContent =
+                `${added + removed} changes`;
+
+            diffStatus.classList.remove(
+                "clean"
+            );
+        }
+    };
+
+    const compareFiles = async () => {
+        if (
+            !originalFile ||
+            !modifiedFile
+        ) {
+            return;
+        }
+
+        diffStatus.textContent =
+            "Comparing";
+
+        diffStatus.classList.remove(
+            "clean"
+        );
+
+        const oldContent =
+            await originalFile.text();
+
+        const newContent =
+            await modifiedFile.text();
+
+        const oldLines =
+            getLines(oldContent);
+
+        const newLines =
+            getLines(newContent);
+
+        const lines =
+            createDiff(
+                oldLines,
+                newLines
+            );
+
+        renderDiff(
+            lines,
+            originalFile.name,
+            modifiedFile.name
+        );
+    };
+
+    const updateDropZone = (
+        target: "a" | "b",
+        file: File
+    ) => {
+        const size =
+            file.size < 1024
+                ? `${file.size} B`
+                : `${(
+                      file.size /
+                      1024
+                  ).toFixed(1)} KB`;
+
+        if (target === "a") {
+            fileAName.textContent =
+                file.name;
+
+            dropATitle.textContent =
+                "File loaded";
+
+            dropASubtitle.textContent =
+                `${size} · click to replace`;
+
+            dropA.classList.add(
+                "loaded"
+            );
+        } else {
+            fileBName.textContent =
+                file.name;
+
+            dropBTitle.textContent =
+                "File loaded";
+
+            dropBSubtitle.textContent =
+                `${size} · click to replace`;
+
+            dropB.classList.add(
+                "loaded"
+            );
+        }
+    };
+
+    const setFile = (
+        file: File,
+        target: "a" | "b"
+    ) => {
+        if (target === "a") {
+            originalFile = file;
+        } else {
+            modifiedFile = file;
+        }
+
+        updateDropZone(
+            target,
+            file
+        );
+
+        if (
+            originalFile &&
+            modifiedFile
+        ) {
+            compareFiles();
+        }
+    };
+
+    const setupDropZone = (
+        zone: HTMLElement,
+        target: "a" | "b"
+    ) => {
+        zone.addEventListener(
+            "dragover",
+            (event) => {
+                event.preventDefault();
+
+                zone.classList.add(
+                    "dragging"
+                );
+            }
+        );
+
+        zone.addEventListener(
+            "dragleave",
+            () => {
+                zone.classList.remove(
+                    "dragging"
+                );
+            }
+        );
+
+        zone.addEventListener(
+            "drop",
+            (event) => {
+                event.preventDefault();
+
+                zone.classList.remove(
+                    "dragging"
+                );
+
+                const file =
+                    event.dataTransfer
+                        ?.files?.[0];
+
+                if (file) {
+                    setFile(
+                        file,
+                        target
+                    );
+                }
+            }
+        );
+    };
+
+    fileA.addEventListener(
+        "change",
+        () => {
+            const file =
+                fileA.files?.[0];
+
+            if (file) {
+                setFile(
+                    file,
+                    "a"
+                );
+            }
+        }
+    );
+
+    fileB.addEventListener(
+        "change",
+        () => {
+            const file =
+                fileB.files?.[0];
+
+            if (file) {
+                setFile(
+                    file,
+                    "b"
+                );
+            }
+        }
+    );
+
+    clearButton.addEventListener(
+        "click",
+        () => {
+            originalFile = null;
+            modifiedFile = null;
+
+            fileA.value = "";
+            fileB.value = "";
+
+            fileAName.textContent =
+                "No file selected";
+
+            fileBName.textContent =
+                "No file selected";
+
+            dropATitle.textContent =
+                "Choose original file";
+
+            dropASubtitle.textContent =
+                "or drag and drop it here";
+
+            dropBTitle.textContent =
+                "Choose modified file";
+
+            dropBSubtitle.textContent =
+                "or drag and drop it here";
+
+            dropA.classList.remove(
+                "loaded"
+            );
+
+            dropB.classList.remove(
+                "loaded"
+            );
+
+            diffSubtitle.textContent =
+                "Select two files to compare";
+
+            diffStatus.textContent =
+                "Waiting";
+
+            diffStatus.classList.remove(
+                "clean"
+            );
+
+            removedCount.textContent =
+                "0";
+
+            addedCount.textContent =
+                "0";
+
+            unchangedCount.textContent =
+                "0";
+
+            totalCount.textContent =
+                "0";
+
+            diff.innerHTML = `
+                <div class="empty">
+                    <span class="empty-icon">±</span>
+
+                    <strong>
+                        No comparison yet
+                    </strong>
+
+                    <span>
+                        Select two files to
+                        automatically compare them.
+                    </span>
+                </div>
+            `;
+        }
+    );
+
+    setupDropZone(
+        dropA,
+        "a"
+    );
+
+    setupDropZone(
+        dropB,
+        "b"
+    );
+</script>
+
+```astro
+<style>
+    .diff-viewer {
+        width: min(1400px, calc(100% - 2rem));
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 4rem 0;
+    }
+
+    .header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .heading {
+        min-width: 0;
+    }
+
+    .back {
+        display: inline-block;
+        margin-bottom: 2.5rem;
+        color: var(--foreground-muted);
+        font-size: 0.85rem;
+        transition: color 160ms ease;
+    }
+
+    .back:hover {
+        color: var(--foreground);
+    }
+
+    .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--accent);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+    }
+
+    .description {
+        max-width: 600px;
+        margin: 1rem 0 0;
+        color: var(--foreground-muted);
+        line-height: 1.6;
+    }
+
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .actions button {
+        padding: 0.65rem 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: 0.55rem;
+        background: var(--background-secondary);
+        color: var(--foreground);
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition:
+            border-color 160ms ease,
+            transform 160ms ease;
+    }
+
+    .actions button:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+    }
+
+    .upload-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .file-card {
+        display: block;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 0.8rem;
+        background: var(--background-secondary);
+        cursor: pointer;
+    }
+
+    .file-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 42px;
+        padding: 0 0.9rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .file-name {
+        max-width: 60%;
+        overflow: hidden;
+        color: var(--foreground);
+        font-weight: 500;
+        letter-spacing: normal;
+        text-overflow: ellipsis;
+        text-transform: none;
+        white-space: nowrap;
+    }
+
+    .drop-area {
+        display: flex;
+        min-height: 150px;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 0.35rem;
+        margin: 0.75rem;
+        border: 1px dashed var(--border);
+        border-radius: 0.55rem;
+        color: var(--foreground-muted);
+        font-size: 0.8rem;
+        transition:
+            border-color 160ms ease,
+            background 160ms ease,
+            box-shadow 160ms ease;
+    }
+
+    .drop-area strong {
+        color: var(--foreground);
+        font-size: 0.85rem;
+    }
+
+    .drop-icon {
+        display: flex;
+        width: 2rem;
+        height: 2rem;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.25rem;
+        border: 1px solid var(--border);
+        border-radius: 0.45rem;
+        color: var(--accent);
+        font-size: 1rem;
+    }
+
+    .drop-area.dragging {
+        border-color: var(--accent);
+        background: color-mix(
+            in srgb,
+            var(--accent) 8%,
+            transparent
+        );
+    }
+
+    .drop-area.loaded {
+        border-color: #166534 !important;
+        background: rgba(34, 197, 94, 0.06) !important;
+    }
+
+    .drop-area.loaded .drop-icon {
+        border-color: #166534 !important;
+        color: #4ade80 !important;
+    }
+
+    .drop-area.loaded strong {
+        color: #86efac !important;
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+
+    .stats {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        padding: 0.8rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        background: var(--background-secondary);
+    }
+
+    .stat {
+        display: flex;
+        align-items: baseline;
+        gap: 0.35rem;
+        color: var(--foreground-muted);
+        font-size: 0.75rem;
+    }
+
+    .stat span:first-child {
+        color: var(--foreground);
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .removed-stat span:first-child {
+        color: #f87171 !important;
+    }
+
+    .added-stat span:first-child {
+        color: #4ade80 !important;
+    }
+
+    .diff-container {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 0.8rem;
+        background: var(--background-secondary);
+    }
+
+    .diff-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 52px;
+        padding: 0 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .diff-heading {
+        min-width: 0;
+    }
+
+    .diff-title {
+        color: var(--foreground);
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+    .diff-subtitle {
+        margin-left: 0.65rem;
+        color: var(--foreground-muted);
+        font-size: 0.75rem;
+    }
+
+    .status {
+        flex-shrink: 0;
+        padding: 0.3rem 0.55rem;
+        border: 1px solid var(--border);
+        border-radius: 0.35rem;
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+    }
+
+    .status.clean {
+        border-color: #166534 !important;
+        background: rgba(34, 197, 94, 0.08) !important;
+        color: #86efac !important;
+    }
+
+    .diff {
+        overflow-x: auto;
+        background: #09090b !important;
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.8rem;
+        line-height: 1.65;
+    }
+
+    /*
+     * IMPORTANT:
+     * These elements are generated through innerHTML.
+     * Astro scoped CSS does not attach its scope attribute
+     * to dynamically-created elements, so all dynamic diff
+     * selectors must use :global().
+     */
+
+    :global(.diff-line) {
+        display: grid;
+        grid-template-columns:
+            3.5rem
+            3.5rem
+            2rem
+            minmax(0, 1fr);
+
+        min-width: 650px;
+        min-height: 1.65em;
+
+        background: #09090b !important;
+    }
+
+    :global(.diff-line code) {
+        min-width: 0;
+        padding: 0 1rem 0 0.25rem;
+        color: #a1a1aa !important;
+        white-space: pre;
+        background: transparent !important;
+    }
+
+    :global(.diff-line .line-number) {
+        padding: 0 0.65rem;
+        border-right: 1px solid #27272a !important;
+        color: #52525b !important;
+        text-align: right;
+        user-select: none;
+    }
+
+    :global(.diff-line .line-marker) {
+        color: #52525b !important;
+        font-weight: 700;
+        text-align: center;
+        user-select: none;
+    }
+
+    :global(.diff-line.same) {
+        background: #09090b !important;
+    }
+
+    :global(.diff-line.same:hover) {
+        background: #18181b !important;
+    }
+
+    /*
+     * ADDED
+     */
+
+    :global(.diff-line.added) {
+        background: #16351f !important;
+        box-shadow: inset 4px 0 0 #3fb950 !important;
+    }
+
+    :global(.diff-line.added .line-number) {
+        background: #12301a !important;
+        border-right-color: #245d30 !important;
+        color: #7ee787 !important;
+    }
+
+    :global(.diff-line.added .line-marker) {
+        color: #3fb950 !important;
+        font-weight: 800 !important;
+    }
+
+    :global(.diff-line.added code) {
+        color: #aff5b4 !important;
+        background: transparent !important;
+    }
+
+    /*
+     * REMOVED
+     */
+
+    :global(.diff-line.removed) {
+        background: #3a1919 !important;
+        box-shadow: inset 4px 0 0 #f85149 !important;
+    }
+
+    :global(.diff-line.removed .line-number) {
+        background: #321616 !important;
+        border-right-color: #6e2926 !important;
+        color: #ffa198 !important;
+    }
+
+    :global(.diff-line.removed .line-marker) {
+        color: #f85149 !important;
+        font-weight: 800 !important;
+    }
+
+    :global(.diff-line.removed code) {
+        color: #ffd8d5 !important;
+        background: transparent !important;
+    }
+
+    .empty {
+        display: flex;
+        min-height: 360px;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 0.5rem;
+        color: var(--foreground-muted);
+    }
+
+    .empty strong {
+        color: var(--foreground);
+        font-size: 0.9rem;
+    }
+
+    .empty span:last-child {
+        font-size: 0.8rem;
+    }
+
+    .empty-icon {
+        display: flex;
+        width: 3rem;
+        height: 3rem;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: 0.6rem;
+        color: var(--accent);
+        font-family: sans-serif;
+        font-size: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+        .header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .actions {
+            justify-content: flex-start;
+        }
+
+        .upload-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .diff-viewer {
+            width: min(100% - 1.5rem, 1400px);
+            padding: 2.5rem 0;
+        }
+
+        .back {
+            margin-bottom: 2rem;
+        }
+
+        .actions {
+            width: 100%;
+        }
+
+        .actions button {
+            flex: 1;
+        }
+
+        .stats {
+            flex-wrap: wrap;
+            gap: 0.75rem 1rem;
+        }
+
+        .diff-header {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+        }
+
+        .diff-subtitle {
+            display: block;
+            margin: 0.2rem 0 0;
+        }
+    }
+</style>
