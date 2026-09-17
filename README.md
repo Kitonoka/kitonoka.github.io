@@ -68,6 +68,13 @@ Create, edit and export freeform node canvases from JSON or Obsidian Canvas file
 
 [View project →](https://kitonoka.github.io/projects/canvas/)
 
+### Markdown Preview
+
+Client-side Markdown editor with live preview, GitHub-style Markdown rendering, syntax highlighting, tables, lists, blockquotes, links, and export support.
+
+[View project →](https://kitonoka.github.io/projects/markdown-preview/)
+
+
 ## GitHub Projects
 
 Public repositories are fetched from the GitHub API during the Astro build.
