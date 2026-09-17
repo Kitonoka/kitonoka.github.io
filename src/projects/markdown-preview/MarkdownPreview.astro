@@ -1,0 +1,836 @@
+---
+const defaultMarkdown = `# Kitonoka
+
+This is a **Markdown** editor with live preview.
+
+## Features
+
+- Write in **Markdown** format
+- See *real-time* preview
+- Export to **HTML**, **MDX**, or raw Markdown
+- Syntax highlighting for inline code
+- Tables
+- Links
+- Blockquotes
+- Ordered and unordered lists
+- Inline \`code\` formatting
+
+## Table Example
+
+| Platform | Value | Example |
+| --- | --- | --- |
+| Linux | \`$XDG_CONFIG_HOME\` or \`$HOME/.config\` | \`/home/alice/.config\` |
+| macOS | \`$HOME/Library/Application Support\` | \`/Users/Alice/Library/Application Support\` |
+| Windows | \`{FOLDERID_RoamingAppData}\` | \`C:\\Users\\Alice\\AppData\\Roaming\` |
+
+> **Note:** config_dir table by dirs rust crate.
+
+## JavaScript Example
+
+\`\`\`javascript
+async function fetchData() {
+    const response = await fetch('/api/data');
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch data');
+    }
+
+    return response.json();
+}
+\`\`\`
+
+## Rust Example
+
+\`\`\`rust
+use std::fs;
+
+fn main() {
+    let config = fs::read_to_string("config.toml")
+        .expect("Failed to read config.toml");
+
+    println!("{config}");
+}
+\`\`\`
+
+## More Markdown
+
+You can combine **bold text**, *italic text*, and \`inline code\` in the same paragraph.
+
+You can also create [links](https://kitonoka.github.io/) to other websites.
+
+### Ordered List
+
+1. Open the configuration directory
+2. Find \`config.toml\`
+3. Edit the configuration
+4. Restart the application
+
+### Unordered List
+
+- Configuration
+- Environment variables
+- File paths
+- Platform-specific settings
+
+---
+
+**Start writing your Markdown here.**
+`;
+---
+
+<main class="markdown-preview">
+    <header class="header">
+        <div class="heading">
+            <a class="back" href="/">← Kitonoka</a>
+
+            <p class="eyebrow">Project</p>
+
+            <h1>Markdown Preview</h1>
+
+            <p class="description">
+                Write Markdown and see the rendered result instantly.
+            </p>
+        </div>
+
+        <div class="actions">
+            <button id="clear" type="button">
+                Clear
+            </button>
+
+            <button id="reset" type="button">
+                Reset
+            </button>
+
+            <button id="copy" type="button">
+                Copy HTML
+            </button>
+
+            <button id="download-md" type="button">
+                Download MD
+            </button>
+        </div>
+    </header>
+
+    <section class="workspace" aria-label="Markdown editor">
+        <div class="panel editor-panel">
+            <div class="panel-header">
+                <span>Markdown</span>
+
+                <span id="char-count" class="meta">
+                    0 chars
+                </span>
+            </div>
+
+            <textarea
+                id="editor"
+                spellcheck="false"
+                autocapitalize="off"
+                autocomplete="off"
+                autocorrect="off"
+                aria-label="Markdown source"
+            >{defaultMarkdown}</textarea>
+        </div>
+
+        <div class="panel preview-panel">
+            <div class="panel-header">
+                <span>Preview</span>
+
+                <span id="word-count" class="meta">
+                    0 words
+                </span>
+            </div>
+
+            <div
+                id="preview"
+                class="preview"
+            ></div>
+        </div>
+    </section>
+</main>
+
+<script>
+    import { marked } from "marked";
+    import hljs from "highlight.js/lib/common";
+
+    const editor =
+        document.querySelector("#editor");
+
+    const preview =
+        document.querySelector("#preview");
+
+    const charCount =
+        document.querySelector("#char-count");
+
+    const wordCount =
+        document.querySelector("#word-count");
+
+    const clearButton =
+        document.querySelector("#clear");
+
+    const resetButton =
+        document.querySelector("#reset");
+
+    const copyButton =
+        document.querySelector("#copy");
+
+    const downloadButton =
+        document.querySelector("#download-md");
+
+    if (
+        !(editor instanceof HTMLTextAreaElement) ||
+        !(preview instanceof HTMLElement) ||
+        !(charCount instanceof HTMLElement) ||
+        !(wordCount instanceof HTMLElement) ||
+        !(clearButton instanceof HTMLButtonElement) ||
+        !(resetButton instanceof HTMLButtonElement) ||
+        !(copyButton instanceof HTMLButtonElement) ||
+        !(downloadButton instanceof HTMLButtonElement)
+    ) {
+        throw new Error(
+            "Markdown Preview failed to initialize."
+        );
+    }
+
+    const defaultMarkdown =
+        editor.defaultValue;
+
+    marked.setOptions({
+        gfm: true,
+        breaks: true,
+    });
+
+    const highlightCode = () => {
+        preview
+            .querySelectorAll("pre code")
+            .forEach((element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return;
+                }
+
+                const languageClass =
+                    [...element.classList].find(
+                        (value) =>
+                            value.startsWith(
+                                "language-"
+                            )
+                    );
+
+                if (!languageClass) {
+                    return;
+                }
+
+                const language =
+                    languageClass
+                        .slice("language-".length)
+                        .toLowerCase();
+
+                if (
+                    language === "text" ||
+                    language === "plaintext" ||
+                    language === "plain"
+                ) {
+                    return;
+                }
+
+                if (!hljs.getLanguage(language)) {
+                    return;
+                }
+
+                const source =
+                    element.textContent ?? "";
+
+                try {
+                    const result =
+                        hljs.highlight(
+                            source,
+                            {
+                                language,
+                                ignoreIllegals: true,
+                            }
+                        );
+
+                    element.innerHTML =
+                        result.value;
+
+                    element.classList.add("hljs");
+                } catch {
+                    // Leave the original code untouched.
+                }
+            });
+    };
+
+    const updateStats = (markdown) => {
+        charCount.textContent =
+            `${markdown.length} chars`;
+
+        const trimmed =
+            markdown.trim();
+
+        const words = trimmed
+            ? trimmed
+                  .replace(
+                      /[`*_#>|[\](){}]/g,
+                      " "
+                  )
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .length
+            : 0;
+
+        wordCount.textContent =
+            `${words} words`;
+    };
+
+    const render = () => {
+        const markdown =
+            editor.value;
+
+        preview.innerHTML =
+            marked.parse(markdown);
+
+        highlightCode();
+        updateStats(markdown);
+    };
+
+    const flashButton = (
+        button,
+        message,
+        duration = 1400
+    ) => {
+        const original =
+            button.textContent;
+
+        button.textContent =
+            message;
+
+        window.setTimeout(() => {
+            button.textContent =
+                original;
+        }, duration);
+    };
+
+    const downloadFile = (
+        filename,
+        content,
+        type
+    ) => {
+        const blob =
+            new Blob(
+                [content],
+                { type }
+            );
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const anchor =
+            document.createElement("a");
+
+        anchor.href = url;
+        anchor.download = filename;
+
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+
+        URL.revokeObjectURL(url);
+    };
+
+    editor.addEventListener(
+        "input",
+        render
+    );
+
+    clearButton.addEventListener(
+        "click",
+        () => {
+            editor.value = "";
+
+            render();
+
+            editor.focus();
+        }
+    );
+
+    resetButton.addEventListener(
+        "click",
+        () => {
+            editor.value =
+                defaultMarkdown;
+
+            render();
+
+            editor.focus();
+        }
+    );
+
+    copyButton.addEventListener(
+        "click",
+        async () => {
+            try {
+                const html =
+                    marked.parse(
+                        editor.value
+                    );
+
+                await navigator.clipboard.writeText(
+                    html
+                );
+
+                flashButton(
+                    copyButton,
+                    "Copied"
+                );
+            } catch {
+                flashButton(
+                    copyButton,
+                    "Failed"
+                );
+            }
+        }
+    );
+
+    downloadButton.addEventListener(
+        "click",
+        () => {
+            downloadFile(
+                "markdown.md",
+                editor.value,
+                "text/markdown;charset=utf-8"
+            );
+        }
+    );
+
+    render();
+</script>
+
+<style>
+    .markdown-preview {
+        width: min(1400px, calc(100% - 2rem));
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 4rem 0;
+    }
+
+    .header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .heading {
+        min-width: 0;
+    }
+
+    .back {
+        display: inline-block;
+        margin-bottom: 2.5rem;
+        color: var(--foreground-muted);
+        font-size: 0.85rem;
+        transition: color 160ms ease;
+    }
+
+    .back:hover {
+        color: var(--foreground);
+    }
+
+    .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--accent);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
+        font-weight: 800;
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+    }
+
+    .description {
+        max-width: 520px;
+        margin: 1rem 0 0;
+        color: var(--foreground-muted);
+        line-height: 1.6;
+    }
+
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
+    .actions button {
+        padding: 0.65rem 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: 0.55rem;
+        background: var(--background-secondary);
+        color: var(--foreground);
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition:
+            border-color 160ms ease,
+            transform 160ms ease,
+            background 160ms ease;
+    }
+
+    .actions button:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+    }
+
+    .workspace {
+        display: grid;
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(0, 1fr);
+        min-height: 650px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 0.8rem;
+        background: var(--background-secondary);
+    }
+
+    .panel {
+        min-width: 0;
+    }
+
+    .editor-panel {
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--border);
+    }
+
+    .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        padding: 0 0.9rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--foreground-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .meta {
+        font-weight: 500;
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    textarea {
+        width: 100%;
+        min-height: 608px;
+        flex: 1;
+        resize: none;
+        padding: 1.25rem;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--foreground);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.82rem;
+        line-height: 1.7;
+        tab-size: 2;
+    }
+
+    textarea::selection {
+        background: var(--accent);
+        color: white;
+    }
+
+    .preview {
+        min-height: 608px;
+        overflow-y: auto;
+        padding: 1.5rem 1.75rem;
+        background: var(--background);
+        color: var(--foreground);
+        line-height: 1.7;
+    }
+
+    .preview :global(h1),
+    .preview :global(h2),
+    .preview :global(h3),
+    .preview :global(h4),
+    .preview :global(h5),
+    .preview :global(h6) {
+        margin-top: 1.5em;
+        margin-bottom: 0.6em;
+        line-height: 1.25;
+        letter-spacing: -0.025em;
+    }
+
+    .preview :global(h1) {
+        margin-top: 0;
+        font-size: 2rem;
+    }
+
+    .preview :global(h2) {
+        font-size: 1.5rem;
+    }
+
+    .preview :global(h3) {
+        font-size: 1.25rem;
+    }
+
+    .preview :global(h4) {
+        font-size: 1.1rem;
+    }
+
+    .preview :global(p) {
+        margin: 0.85rem 0;
+    }
+
+    .preview :global(a) {
+        color: var(--accent);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+
+    .preview :global(a:hover) {
+        opacity: 0.8;
+    }
+
+    .preview :global(ul),
+    .preview :global(ol) {
+        margin: 1rem 0;
+        padding-left: 1.75rem;
+    }
+
+    .preview :global(ul) {
+        list-style-type: disc;
+    }
+
+    .preview :global(ol) {
+        list-style-type: decimal;
+    }
+
+    .preview :global(li) {
+        margin: 0.3rem 0;
+        color: var(--foreground);
+    }
+
+    .preview :global(li::marker) {
+        color: var(--foreground-muted);
+        font-size: 0.9em;
+    }
+
+    .preview :global(li > ul),
+    .preview :global(li > ol) {
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .preview :global(blockquote) {
+        margin: 1.25rem 0;
+        padding: 0.65rem 1rem;
+        border-left: 3px solid var(--accent);
+        border-radius: 0 0.35rem 0.35rem 0;
+        background: var(--background-secondary);
+        color: var(--foreground-muted);
+    }
+
+    .preview :global(blockquote p:first-child) {
+        margin-top: 0;
+    }
+
+    .preview :global(blockquote p:last-child) {
+        margin-bottom: 0;
+    }
+
+    .preview :global(hr) {
+        margin: 2rem 0;
+        border: 0;
+        border-top: 1px solid var(--border);
+    }
+
+    .preview :global(code) {
+        padding: 0.15rem 0.35rem;
+        border: 1px solid var(--border);
+        border-radius: 0.3rem;
+        background: var(--background-secondary);
+        color: var(--foreground);
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.88em;
+    }
+
+    .preview :global(pre) {
+        margin: 1.25rem 0;
+        padding: 1rem;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: 0.55rem;
+        background: #09090b;
+    }
+
+    .preview :global(pre code) {
+        display: block;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #e4e4e7;
+        font-family:
+            "Cascadia Mono",
+            "SFMono-Regular",
+            Consolas,
+            "Liberation Mono",
+            monospace;
+        font-size: 0.8rem;
+        line-height: 1.65;
+    }
+
+    .preview :global(table) {
+        width: 100%;
+        margin: 1.25rem 0;
+        border-collapse: collapse;
+        border: 1px solid var(--border);
+    }
+
+    .preview :global(th),
+    .preview :global(td) {
+        padding: 0.6rem 0.8rem;
+        border: 1px solid var(--border);
+        text-align: left;
+    }
+
+    .preview :global(th) {
+        background: var(--background-secondary);
+        font-weight: 700;
+    }
+
+    .preview :global(img) {
+        max-width: 100%;
+        height: auto;
+        border-radius: 0.5rem;
+    }
+
+    .preview :global(strong) {
+        font-weight: 700;
+    }
+
+    .preview :global(em) {
+        font-style: italic;
+    }
+
+    .preview :global(del) {
+        opacity: 0.7;
+    }
+
+    /* Highlight.js syntax colors */
+
+    .preview :global(.hljs-comment),
+    .preview :global(.hljs-quote) {
+        color: #71717a;
+    }
+
+    .preview :global(.hljs-keyword),
+    .preview :global(.hljs-selector-tag),
+    .preview :global(.hljs-literal),
+    .preview :global(.hljs-section) {
+        color: #c084fc;
+    }
+
+    .preview :global(.hljs-string),
+    .preview :global(.hljs-title),
+    .preview :global(.hljs-name),
+    .preview :global(.hljs-type),
+    .preview :global(.hljs-attribute) {
+        color: #a3e635;
+    }
+
+    .preview :global(.hljs-number),
+    .preview :global(.hljs-symbol),
+    .preview :global(.hljs-bullet) {
+        color: #67e8f9;
+    }
+
+    .preview :global(.hljs-built_in) {
+        color: #fbbf24;
+    }
+
+    .preview :global(.hljs-function),
+    .preview :global(.hljs-title.function_) {
+        color: #60a5fa;
+    }
+
+    .preview :global(.hljs-variable),
+    .preview :global(.hljs-template-variable) {
+        color: #f9a8d4;
+    }
+
+    @media (max-width: 900px) {
+        .header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .actions {
+            justify-content: flex-start;
+        }
+
+        .workspace {
+            grid-template-columns: 1fr;
+        }
+
+        .editor-panel {
+            min-height: 500px;
+            border-right: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        textarea {
+            min-height: 500px;
+        }
+
+        .preview {
+            min-height: 500px;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .markdown-preview {
+            width: min(100% - 1.5rem, 1400px);
+            padding: 2.5rem 0;
+        }
+
+        .back {
+            margin-bottom: 2rem;
+        }
+
+        .actions {
+            width: 100%;
+        }
+
+        .actions button {
+            flex: 1;
+        }
+
+        .workspace {
+            min-height: 0;
+        }
+
+        .preview {
+            padding: 1.25rem;
+        }
+    }
+</style>
